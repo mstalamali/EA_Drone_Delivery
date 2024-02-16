@@ -1,0 +1,80 @@
+{
+  "width": 1000,
+  "height": 1000,
+  "pixel_to_m": 16,
+  "depot": {
+    "x": 500,
+    "y": 500,
+    "radius": 50
+  },
+  "simulation_steps": 15000,
+  "number_runs": 128,
+  "seed": 1445,
+  "visualization": {
+    "activate": true,
+    "fps": 60,
+    "graphics": false
+  },
+  "random_walk": {
+    "random_walk_factor": 0.9,
+    "levi_factor": 1.4
+  },
+  "agent": {
+    "radius": 80,
+    "speed": 10,
+    "frame_weight": 10,
+    "battery_weight": 10,
+    "theoritical_battery_capacity": 800,
+    "min_battery_health": 0.5,
+    "max_battery_health": 1.0,
+    "communication_radius": 50,
+    "noise_sampling_mu": 0.0,
+    "noise_sampling_sigma": 0.0,
+    "noise_sd": 0.0,
+    "fuel_cost": 0
+  },
+  "behaviors": [
+    {
+      "class": "NaiveBehavior",
+      "population_size": 50,
+      "parameters": {
+        "high_threshold": 60.0, 
+        "low_threshold": 20.0,
+        "safety_threshold": 5.0
+      }
+    },
+    {
+      "class": "DecentralisedLearningBehavior",
+      "population_size": 0,
+      "parameters": {
+        "high_threshold": 60.0, 
+        "low_threshold": 20.0,
+        "safety_threshold": 5.0
+      }
+    },
+
+    {
+      "class": "CentralisedLearningBehavior",
+      "population_size": 0,
+      "parameters": {
+        "rotation_angle": 0
+      }
+    }
+  ],
+  "orders": {
+    "orders_arrival_probability": 0.01,
+    "interval_between_orders_arrivals": 500.0,
+    "min_distance": 1000,
+    "max_distance": 8000,
+    "radius": 50,
+    "min_package_weight": 1,
+    "max_package_weight": 5
+  },
+  "data_collection": {
+    "output_directory": "../data/test/",
+    "filename": "24sceptical_1scaboteur_r90_outlierpenalisation.csv",
+    "metrics": ["rewards", "items_collected"],
+    "precision_recording": false,
+    "precision_recording_interval": 100
+  }
+}
