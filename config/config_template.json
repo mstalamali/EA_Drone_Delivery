@@ -1,0 +1,80 @@
+{
+  "width": 1000,
+  "height": 1000,
+  "pixel_to_m": 16,
+  "depot": {
+    "x": 500,
+    "y": 500,
+    "radius": 50
+  },
+  "simulation_steps": TIME_STEPS,
+  "number_runs": 128,
+  "seed": SEED,
+  "visualization": {
+    "activate": false,
+    "fps": 60,
+    "graphics": false
+  },
+  "random_walk": {
+    "random_walk_factor": 0.9,
+    "levi_factor": 1.4
+  },
+  "agent": {
+    "radius": 80,
+    "speed": SPEED,
+    "frame_weight": 10,
+    "battery_weight": 10,
+    "theoritical_battery_capacity": 800,
+    "min_battery_health": MIN_BH,
+    "max_battery_health": MAX_BH,
+    "communication_radius": 50,
+    "noise_sampling_mu": 0.0,
+    "noise_sampling_sigma": 0.0,
+    "noise_sd": 0.0,
+    "fuel_cost": 0
+  },
+  "behaviors": [
+    {
+      "class": "NaiveBehavior",
+      "population_size": S_NAIVE,
+      "parameters": {
+        "high_threshold": HIGH_THRESH, 
+        "low_threshold": LOW_THRESH,
+        "safety_threshold": SAFETY_THRESH
+      }
+    },
+    {
+      "class": "DecentralisedLearningBehavior",
+      "population_size": S_DECENTRALISED_LEARNING,
+      "parameters": {
+        "high_threshold": HIGH_THRESH, 
+        "low_threshold": LOW_THRESH,
+        "safety_threshold": SAFETY_THRESH
+      }
+    },
+
+    {
+      "class": "CentralisedLearningBehavior",
+      "population_size": S_CENTRALISED_LEARNING,
+      "parameters": {
+        "high_threshold": HIGH_THRESH, 
+        "low_threshold": LOW_THRESH,
+        "safety_threshold": SAFETY_THRESH
+      }
+    }
+  ],
+  "orders": {
+    "orders_arrival_probability": 0.01,
+    "interval_between_orders_arrivals": ORDER_ARRIVAL_INTERVAL,
+    "min_distance": MIN_PACKAGE_DISTANCE,
+    "max_distance": MAX_PACKAGE_DISTANCE,
+    "radius": 50,
+    "min_package_weight": MIN_PACKAGE_WEIGHT,
+    "max_package_weight": MAX_PACKAGE_WEIGHT
+  },
+  "data_collection": {
+    "output_directory": "DATA_FOLDER",
+    "filename": "DATA_FILE_NAME",
+    "recording_interval": DATA_RECORDING_INTERVAL
+  }
+}
