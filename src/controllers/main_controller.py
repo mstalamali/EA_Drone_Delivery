@@ -6,6 +6,9 @@ from model.environment import Environment
 
 from random import seed
 
+from model.navigation import Order
+
+
 class Configuration:
     def __init__(self, config_file):
         self._parameters = self.read_config(config_file)
@@ -54,9 +57,8 @@ class MainController:
         
         seed(self.config.value_of("seed"))
 
-        random_walk.set_parameters(**self.config.value_of('random_walk'),
-                                   max_levi_steps=self.config.value_of("simulation_steps")+1)
         self.clock = Clock(config)
+
         self.environment = Environment(width=self.config.value_of("width"),
                                        height=self.config.value_of("height"),
                                        pixel_to_m=self.config.value_of("pixel_to_m"),
@@ -64,74 +66,93 @@ class MainController:
                                        behavior_params=self.config.value_of("behaviors"),
                                        depot=self.config.value_of("depot"),
                                        order_params=config.value_of("orders"),
-                                       # market_params=config.value_of("market"),
-                                       clock=self.clock
-                                       )
-        self.rewards_evolution = ""
-        self.rewards_evolution_list = []
+                                       clock=self.clock)
+        
+        self.output_directory = self.config.value_of("data_collection")["output_directory"]
+        self.filename = self.config.value_of("data_collection")["filename"]
 
+        if self.filename is not None and self.filename != "":
+            self.time_evolution_file = open(self.output_directory + "/time_evolution_" + self.filename,"w")
+            self.time_evolution_file.write("Time(s)\tDelivered\tFailed\tPending\n")
 
 
     def step(self):
-        if self.config.value_of("data_collection")['precision_recording'] and \
-                self.clock.tick % self.config.value_of("data_collection")['precision_recording_interval'] == 0:
-            self.rewards_evolution += f"{self.clock.tick},{self.get_reward_stats()}"
-            self.rewards_evolution_list.append([self.clock.tick, self.get_rewards()])
+
         if self.clock.tick < self.config.value_of("simulation_steps"):
             self.clock.step()
             self.environment.step()
+            if self.filename is not None or self.filename != "":
+                self.record_time_evolution_data()
+        # else:
+        #     print(len(self.environment.successful_orders_list),self.environment.failed_delivery_attempt)
+        #     if self.filename is not None or self.filename != "":
+        #         self.record_delivery_time_data()
+        #         self.time_evolution_file.close()
+
+
 
     def start_simulation(self):
         for step_nb in range(self.config.value_of("simulation_steps")):
             self.step()
 
-    def get_sorted_reward_stats(self):
-        sorted_bots = sorted([bot for bot in self.environment.population], key=lambda bot: abs(bot.noise_mu))
-        res = ""
-        for bot in sorted_bots:
-            res += str(bot.reward()) + ","
-        res = res[:-1]  # remove last comma
-        res += "\n"
-        return res
-
-    def get_reward_stats(self):
-        res = ""
-        for bot in self.environment.population:
-            res += str(bot.reward()) + ","
-        res = res[:-1]  # remove last comma
-        res += "\n"
-        return res
-
-    def get_rewards(self):
-        return [bot.reward() for bot in self.environment.population]
-
-    def get_items_collected(self):
-        return [bot.items_collected for bot in self.environment.population]
-
-    def get_drifts(self):
-        return [bot.noise_mu for bot in self.environment.population]
-
-    def get_items_collected_stats(self):
-        res = ""
-        for bot in self.environment.population:
-            res += str(bot.items_collected) + ","
-        res = res[:-1]  # remove last comma
-        res += "\n"
-        return res
-
-    def get_drift_stats(self):
-        res = ""
-        for bot in self.environment.population:
-            res += str(bot.noise_mu) + ","
-        res = res[:-1]  # remove last comma
-        res += "\n"
-        return res
+        if self.filename is not None or self.filename != "":
+            self.record_delivery_time_data()
+            self.time_evolution_file.close()
 
     def get_robot_at(self, x, y):
         return self.environment.get_robot_at(x, y)
 
-    def get_rewards_evolution(self):
-        return self.rewards_evolution
+    def record_time_evolution_data(self):
+        if self.clock.tick % self.config.value_of("data_collection")['recording_interval'] == 0:
+            self.time_evolution_file.write(str(self.clock.tick)+"\t"+\
+                str(len(self.environment.successful_orders_list))+"\t"+\
+                str(self.environment.failed_delivery_attempts)+"\t"+\
+                str(len(self.environment.pending_orders_list))+"\n")
 
-    def get_rewards_evolution_list(self):
-        return self.rewards_evolution_list
+    def record_delivery_time_data(self):
+        delivery_times_file = open(self.output_directory + "/delivery_times_" + self.filename,"w")
+        delivery_times_file.write("Arrived\tDelivered\tTook\n")
+        for order in self.environment.successful_orders_list:
+            delivery_times_file.write(str(order.arrival_time)+"\t"+str(order.fulfillment_time)+"\t"+str(order.fulfillment_time-order.arrival_time)+"\n")
+        delivery_times_file.close()
+
+
+
+#   Data retrieval functions
+
+    # def get_rewards_evolution(self):
+    #     return self.rewards_evolution
+
+    # def get_rewards_evolution_list(self):
+    #     return self.rewards_evolution_list
+
+    # def get_items_collected_stats(self):
+    #     res = ""
+    #     for bot in self.environment.population:
+    #         res += str(bot.items_collected) + ","
+    #     res = res[:-1]  # remove last comma
+    #     res += "\n"
+    #     return res
+
+    # def get_rewards(self):
+    #     return [bot.reward() for bot in self.environment.population]
+
+    # def get_items_collected(self):
+    #     return [bot.items_collected for bot in self.environment.population]
+
+    # def get_sorted_reward_stats(self):
+    #     sorted_bots = sorted([bot for bot in self.environment.population], key=lambda bot: abs(bot.noise_mu))
+    #     res = ""
+    #     for bot in sorted_bots:
+    #         res += str(bot.reward()) + ","
+    #     res = res[:-1]  # remove last comma
+    #     res += "\n"
+    #     return res
+
+    # def get_reward_stats(self):
+    #     res = ""
+    #     for bot in self.environment.population:
+    #         res += str(bot.reward()) + ","
+    #     res = res[:-1]  # remove last comma
+    #     res += "\n"
+    #     return res

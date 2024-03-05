@@ -1,13 +1,16 @@
 from math import cos, sin, radians
-from PIL import ImageTk
 from model.agent import Agent
-# from model.market import market_factory
 from model.navigation import Location, Order
 from helpers.utils import norm, distance_between
 from random import randint, random, expovariate
 import numpy as np
 from collections import deque
-# from model.payment import PaymentDB
+
+
+try:
+    from PIL import ImageTk
+except ModuleNotFoundError:
+    print("Tkinter not installed...")
 
 class Environment:
 
@@ -26,15 +29,11 @@ class Environment:
         self.package_image = None
         self.robot_image = None
         self.timestep = 0
-        self.order_params = order_params
-        
-        self.failed_delivery_attempt = 0        
-
+        self.order_params = order_params        
+        self.failed_delivery_attempts = 0        
         self.last_order_arrival = 0.0
         self.next_order_arrival = 0.0
         
-
-
         # test variables
         self.order_test = 0
 
@@ -57,6 +56,17 @@ class Environment:
         
         # print(self.clock.tick)
 
+
+
+        # 2. Update orders' list
+        self.update_pending_orders_list(self.order_params)
+
+        # 4. Execture robot step
+        for robot in self.population:
+            # self.check_locations(robot)
+            robot.step()
+
+
         # 1. compute neighbors
         pop_size = len(self.population)
         neighbors_table = [[] for i in range(pop_size)]
@@ -66,24 +76,13 @@ class Environment:
                     if self.population[id2].in_depot():
                         neighbors_table[id1].append(self.population[id2])
                         neighbors_table[id2].append(self.population[id1])
-
-        # 2. Update orders' list
-        self.update_pending_orders_list(self.order_params)
-
+                        
         # 3. communication
         for robot in self.population:
             robot.communicate(neighbors_table[robot.id])
 
-        # 4. Execture robot step
-        for robot in self.population:
-            # self.check_locations(robot)
-            robot.step()
 
-        # # 5. charge robots
-        # for robot in self.population:
-        #     if robot.charging_state():
-        #         self.charge_robot(robot)
-        print(self.clock.tick,len(self.successful_orders_list),self.failed_delivery_attempt)
+        # print(self.clock.tick,len(self.successful_orders_list),self.failed_delivery_attempts)
 
     def update_pending_orders_list(self, order_params):
         # print(order_params['orders_arrival_probability'])

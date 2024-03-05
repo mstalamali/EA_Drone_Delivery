@@ -3,7 +3,6 @@ import copy
 from helpers import random_walk as rw
 from random import random, choices, gauss, uniform
 from math import sin, cos, radians, pow
-from tkinter import LAST
 from collections import deque
 
 from model.behavior import State, behavior_factory
@@ -13,6 +12,10 @@ import numpy as np
 
 from helpers.utils import get_orientation_from_vector, rotate, CommunicationState, norm
 
+try:
+    from tkinter import LAST
+except ModuleNotFoundError:
+    print("Tkinter not installed...")
 
 class AgentAPI:
     def __init__(self, agent):
@@ -29,6 +32,7 @@ class AgentAPI:
         self.get_order = agent.get_order
 
         self.update_state = agent.update_state
+        self.make_bid=agent.set_bid
 
         # Packager related functions
         self.carries_package = agent.carries_package
@@ -37,7 +41,7 @@ class AgentAPI:
         self.return_package = agent.return_package
         self.get_package_info = agent.get_package_info
 
-        # self.update_delivery_location=agent.update_delivery_location
+        
 
 class Agent:
     colors = {State.INSIDE_DEPOT_CHARGING: "red", State.INSIDE_DEPOT_MADE_BID: "orange", State.INSIDE_DEPOT_AVAILABLE: "green",\
@@ -104,6 +108,8 @@ class Agent:
 
         self.color = self.colors[State.INSIDE_DEPOT_CHARGING]
 
+        self._bid = None
+
         self.api = AgentAPI(self)
 
         self.g = 9.81 # Gravity constant (kg/s^2)
@@ -113,8 +119,9 @@ class Agent:
         self.charger_power = 100 # (W)
         self.charge_efficiency = 0.95 # (%)
 
-        total_weight = self.frame_weight + self.battery_weight + 5
-        print((self.theoritical_battery_capacity*0.95/(pow(self.g*total_weight,1.5)/pow(2*self.n_r*self.rho*self.zeta,0.5)/3600.0))*self._speed)
+        self.new_nav = self.behavior.navigation_table
+        # total_weight = self.frame_weight + self.battery_weight + 5
+        # print((self.theoritical_battery_capacity*0.95/(pow(self.g*total_weight,1.5)/pow(2*self.n_r*self.rho*self.zeta,0.5)/3600.0))*self._speed)
 
     def __str__(self):
         return f"ID: {self.id}\n" \
@@ -143,22 +150,27 @@ class Agent:
     def clock(self):
         return self._clock
 
-    def communicate(self, neighbors):
-        self.previous_nav = copy.deepcopy(self.behavior.navigation_table)
-        if self.comm_state == CommunicationState.OPEN:
-            session = CommunicationSession(self, neighbors)
-            self.behavior.check_others_bid(session)
-
-        self.new_nav = self.behavior.navigation_table
-        self.behavior.navigation_table = self.previous_nav
-
     def step(self):
+        # print("before", self.clock().tick,self.id,self.behavior.state, self.comm_state, self._bid)
+
         self.behavior.navigation_table = self.new_nav
         self.sensors = self.environment.get_sensors(self)
         self.behavior.step(AgentAPI(self))
         self.move()
         self.update_battery_state()
         self.update_trace()
+
+        # print("after", self.clock().tick,self.id,self.behavior.state, self.comm_state, self._bid)
+
+    def communicate(self, neighbors):
+        self.previous_nav = copy.deepcopy(self.behavior.navigation_table)
+
+        if self.comm_state == CommunicationState.OPEN:
+            session = CommunicationSession(self, neighbors)
+            self.behavior.check_others_bid(session)
+
+        self.new_nav = self.behavior.navigation_table
+        self.behavior.navigation_table = self.previous_nav
 
     def get_info_from_behavior(self, location):
         return self.behavior.sell_info(location)
@@ -224,6 +236,9 @@ class Agent:
             dr = self._speed * dr / norm_dr
         self.dr = dr
 
+    def set_bid(self, bid):
+        self._bid = bid
+
 # ------> Charging related functions
 
     def update_battery_state(self):
@@ -232,6 +247,7 @@ class Agent:
             # Formula: charge time = (battery capacity × depth of discharge) ÷ (charge current × charge efficiency)
             # Accuracy: Highest
             # Complexity: Highest
+
             
             self.current_battery_capacity += self.actual_battery_capacity*(100.0-self._battery_level) / (self.charger_power*self.charge_efficiency*3600)
             
@@ -258,7 +274,8 @@ class Agent:
         return self._in_depot
 
     def update_state(self,state):
-        if state == State.INSIDE_DEPOT_AVAILABLE or state == State.INSIDE_DEPOT_MADE_BID:
+        if state == State.INSIDE_DEPOT_MADE_BID:
+        # if state == State.INSIDE_DEPOT_AVAILABLE or state == State.INSIDE_DEPOT_MADE_BID:
             self.comm_state = CommunicationState.OPEN
         else:
             self.comm_state = CommunicationState.CLOSED
@@ -301,7 +318,7 @@ class Agent:
 
         self.attempted_delivery = None
         self.failed_deliveries+=1
-        self.environment.failed_delivery_attempt+=1
+        self.environment.failed_delivery_attempts+=1
 
     def pickup_package(self):
         order = self.pending_orders_list.popleft()

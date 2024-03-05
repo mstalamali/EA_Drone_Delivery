@@ -1,7 +1,11 @@
 from enum import Enum
 from math import atan2, pi, radians
 import numpy as np
-from PIL import ImageTk
+
+try:
+    from PIL import ImageTk
+except ModuleNotFoundError:
+    print("Tkinter not installed...")
 
 def norm(vector):
     return (sum(x ** 2 for x in vector)) ** 0.5

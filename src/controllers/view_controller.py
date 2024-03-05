@@ -1,8 +1,12 @@
 import os
-import tkinter as tk
 import time
 
-from PIL import Image, ImageTk
+try:
+    import tkinter as tk
+    from PIL import Image, ImageTk
+except ModuleNotFoundError:
+    print("Tkinter not installed...")
+
 
 # from tkinter import Label
 
@@ -23,21 +27,6 @@ class ViewController:
         self.canvas = tk.Canvas(self.root, width=width, height=height, highlightthickness=0)
         self.canvas.configure(bg="white")
         self.canvas.pack(fill="both", expand=False, side="left")
-
-        # limg= Label(self.root, i=self.controller.environment.background_img)
-        # limg.pack()
-
-        # background_img = Image.open(self.controller.environment.background_img)
-        # background_img = background_img.resize((width,height), Image.Resampling.LANCZOS)
-        # background_tkimg = ImageTk.PhotoImage(background_img)
-
-        # self.canvas = tk.Canvas(self.root, highlightthickness=0)
-        # self.canvas.pack(expand = True, fill = "both")
-        # self.canvas.create_image(0,0, image = background_tkimg, anchor = "nw")
-
-
-
-        
 
         self.debug_canvas = tk.Canvas(self.root, width=200, height=height/2, highlightthickness=0)
         self.debug_canvas.configure(bg="white smoke")

@@ -3,17 +3,27 @@ import copy
 from model.navigation import Location, Target
 from helpers.utils import rotate, CommunicationState
 
+import numpy as np
+
 class CommunicationSession:
     def __init__(self, client, neighbors):
         self._client = client
-        self._bids = {n.id: n for n in neighbors if n.comm_state == CommunicationState.OPEN}
-
+        self._bids = [n._bid for n in neighbors if n.comm_state == CommunicationState.OPEN]
+        self._bidders = [n.id for n in neighbors if n.comm_state == CommunicationState.OPEN]
 
     def get_best_bid(self):
         if len(self._bids)>0:
-            return max(self._bids)
+            index=np.argmax(self._bids)
+            max_value = self._bids[index]
+
+            if self._bids.count(self._bids[index]) == 1:
+                return [max_value, self._bidders[index]]
+            else:
+
+                bidders_with_max_bid = [self._bidders[i] for i in range(len(self._bidders)) if self._bids[i] == max_value]
+                return [max_value, max(bidders_with_max_bid)]
         else:
-            return -1
+            return [-1,-1]
 
 
     # def get_metadata(self, location):
