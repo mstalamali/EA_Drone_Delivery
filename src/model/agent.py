@@ -302,7 +302,8 @@ class Agent:
         self.successful_orders_list.appendleft(self.attempted_delivery)
         self.attempted_delivery = None
         self.items_delivered += 1
-        self.environment.ongoing_attempts-=1
+        self.environment.number_of_successes += 1
+        self.environment.ongoing_attempts -= 1
 
     def return_package(self):
         self._carries_package = False

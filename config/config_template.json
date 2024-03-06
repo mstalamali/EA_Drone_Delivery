@@ -9,7 +9,7 @@
   },
   "evaluation_type": "EVAL_TYPE",
   "simulation_steps": TIME_STEPS,
-  "orders_per_episode": ORDERS_PER_EPISODE,
+  "episodes_no": NO_EPISODES,
   "seed": SEED,
   "visualization": {
     "activate": false,
@@ -39,14 +39,14 @@
       "class": "NaiveBehavior",
       "population_size": S_NAIVE,
       "parameters": {
-        "working_threshold": HIGH_THRESH 
+        "working_threshold": WORKING_THRESH 
       }
     },
     {
       "class": "DecentralisedLearningBehavior",
       "population_size": S_DECENTRALISED_LEARNING,
       "parameters": {
-        "working_threshold": HIGH_THRESH 
+        "working_threshold": WORKING_THRESH 
       }
     },
 
@@ -54,11 +54,12 @@
       "class": "CentralisedLearningBehavior",
       "population_size": S_CENTRALISED_LEARNING,
       "parameters": {
-        "working_threshold": HIGH_THRESH 
+        "working_threshold": WORKING_THRESH 
       }
     }
   ],
   "orders": {
+    "orders_per_episode": ORDERS_PER_EPISODE,
     "orders_arrival_probability": 0.01,
     "interval_between_orders_arrivals": ORDER_ARRIVAL_INTERVAL,
     "min_distance": MIN_PACKAGE_DISTANCE,

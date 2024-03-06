@@ -54,6 +54,8 @@ class ViewController:
                 # Update environment
                 if not self.paused:
                     self.controller.step()
+                    self.controller.check_end()
+                    self.animation_ended = not self.controller.experiment_running
 
                 self.refresh()
                 self.can_render = False
@@ -69,6 +71,8 @@ class ViewController:
                 self.last_fps_check_time = time.time()
 
             self.root.update()
+            
+        self.controller.save_final_data()
 
     def refresh(self):
         self.display_selected_info()

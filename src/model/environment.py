@@ -30,13 +30,14 @@ class Environment:
         self.timestep = 0
         self.order_params = order_params        
         self.failed_delivery_attempts = 0
-        self.ongoing_attempts = 0        
+        self.ongoing_attempts = 0
+        self.number_of_successes = 0        
         self.last_order_arrival = 0.0
         self.next_order_arrival = 0.0
         self.evaluation_type=evaluation_type
 
         if evaluation_type == "episodes": #other option is "continuous":
-            self.create_episode_orders_list(order_params)
+            self.create_episode_orders_list()
         else:
             self.update_pending_orders_list(order_params)
 
@@ -95,9 +96,9 @@ class Environment:
         # print(self.clock.tick,len(self.successful_orders_list),self.failed_delivery_attempts)
 
 
-    def create_episode_orders_list(self, order_params):
-        while len(self.pending_orders_list)<order_params['orders_per_episode']:
-            self.pending_orders_list.append(Order(self.width, self.height, self.depot,float('inf'), order_params))
+    def create_episode_orders_list(self):
+        while len(self.pending_orders_list)<self.order_params['orders_per_episode']:
+            self.pending_orders_list.append(Order(self.width, self.height, self.depot,float('inf'), self.order_params))
 
         # for i in range(len(self.pending_orders_list)):
         #     print(self.pending_orders_list[i].location)

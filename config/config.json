@@ -7,8 +7,9 @@
     "y": 500,
     "radius": 50
   },
-  "evaluation_type": "episodes",
+  "evaluation_type": "continuous",
   "simulation_steps": 172800,
+  "episodes_no": 10,
   "seed": 1445,
   "visualization": {
     "activate": false,
@@ -25,7 +26,7 @@
     "frame_weight": 10,
     "battery_weight": 10,
     "theoritical_battery_capacity": 800,
-    "min_battery_health": 0.5,
+    "min_battery_health": 1.0,
     "max_battery_health": 1.0,
     "communication_radius": 50,
     "noise_sampling_mu": 0.0,
@@ -36,7 +37,7 @@
   "behaviors": [
     {
       "class": "NaiveBehavior",
-      "population_size": 25,
+      "population_size": 10,
       "parameters": {
         "working_threshold": 90.0
       }
@@ -58,7 +59,7 @@
     }
   ],
   "orders": {
-    "orders_per_episode": 100,
+    "orders_per_episode": 10,
     "orders_arrival_probability": 0.01,
     "interval_between_orders_arrivals": 1800,
     "min_distance": 1000,

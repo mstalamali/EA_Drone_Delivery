@@ -69,21 +69,26 @@ class MainController:
                                        agent_params=self.config.value_of("agent"),
                                        behavior_params=self.config.value_of("behaviors"))
         
+        if self.config.value_of("evaluation_type") == "episodes":
+            self.number_of_episodes = config.value_of("episodes_no")
+
         self.output_directory = self.config.value_of("data_collection")["output_directory"]
         self.filename = self.config.value_of("data_collection")["filename"]
+
+        self.experiment_running = True
 
         if self.filename is not None and self.filename != "":
             self.time_evolution_file = open(self.output_directory + "/time_evolution_" + self.filename,"w")
             self.time_evolution_file.write("Time(s)\tDelivered\tPending\tFailed\n")
 
 
-    def step(self):
 
-        if self.clock.tick < self.config.value_of("simulation_steps") or ( not (len(self.environment.successful_orders_list) == self.config.value_of("orders")['orders_per_episode']) and (self.config.value_of("evaluation_type")=="episodes")):
-            self.clock.step()
-            self.environment.step()
-            if self.filename is not None or self.filename != "":
-                self.record_time_evolution_data()
+    def step(self):
+        self.clock.step()
+        self.environment.step()
+        if self.filename is not None or self.filename != "":
+            self.record_time_evolution_data()
+
         # else:
         #     print(len(self.environment.successful_orders_list),self.environment.failed_delivery_attempt)
         #     if self.filename is not None or self.filename != "":
@@ -91,23 +96,42 @@ class MainController:
         #         self.time_evolution_file.close()
 
 
+    def check_end(self):
 
-    def start_simulation(self):
-        for step_nb in range(self.config.value_of("simulation_steps")):
-            self.step()
+        if self.clock.tick == self.config.value_of("simulation_steps"):
+            self.experiment_running = False
 
+        if self.config.value_of("evaluation_type")=="episodes":
+
+            if self.environment.number_of_successes == self.config.value_of("orders")['orders_per_episode']:
+                self.number_of_episodes-=1
+
+                if self.number_of_episodes == 0:  
+                    self.experiment_running = False
+                else:
+                    self.environment.number_of_successes = 0
+                    self.environment.create_episode_orders_list()
+
+    def save_final_data(self):
         if self.filename is not None or self.filename != "":
             self.record_delivery_time_data()
             if (self.clock.tick % self.config.value_of("data_collection")['recording_interval'] != 0):
                 self.record_time_evolution_data(True)
             self.time_evolution_file.close()
 
+    def start_simulation(self):
+
+        while self.experiment_running:
+            self.step()
+            self.check_end()
+
+        self.save_final_data()
+
     def get_robot_at(self, x, y):
         return self.environment.get_robot_at(x, y)
 
     def record_time_evolution_data(self,end=False):
         if self.clock.tick % self.config.value_of("data_collection")['recording_interval'] == 0 or end:
-
             successful = len(self.environment.successful_orders_list)
             failed = self.environment.failed_delivery_attempts
             pending = len(self.environment.pending_orders_list) + self.environment.ongoing_attempts
