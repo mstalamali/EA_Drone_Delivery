@@ -248,7 +248,6 @@ class Agent:
             # Accuracy: Highest
             # Complexity: Highest
 
-            
             self.current_battery_capacity += self.actual_battery_capacity*(100.0-self._battery_level) / (self.charger_power*self.charge_efficiency*3600)
             
             if self.current_battery_capacity>self.actual_battery_capacity:
@@ -293,7 +292,7 @@ class Agent:
 # ------> Delivery related functions
     def get_order(self):
         if len(self.pending_orders_list)>0:
-            return self.pending_orders_list[-1]
+            return self.pending_orders_list[0]
         else:
             return None
 
@@ -303,6 +302,7 @@ class Agent:
         self.successful_orders_list.appendleft(self.attempted_delivery)
         self.attempted_delivery = None
         self.items_delivered += 1
+        self.environment.ongoing_attempts-=1
 
     def return_package(self):
         self._carries_package = False
@@ -311,7 +311,7 @@ class Agent:
         if self.get_order() == None:
             self.pending_orders_list.appendleft(self.attempted_delivery)
         else:
-            if self.pending_orders_list[-1].bid_start_time > self.clock().tick:
+            if self.pending_orders_list[0].bid_start_time > self.clock().tick:
                 self.pending_orders_list.appendleft(self.attempted_delivery)
             else:
                 self.pending_orders_list.insert(1,self.attempted_delivery)
@@ -319,12 +319,27 @@ class Agent:
         self.attempted_delivery = None
         self.failed_deliveries+=1
         self.environment.failed_delivery_attempts+=1
+        self.environment.ongoing_attempts-=1
 
     def pickup_package(self):
         order = self.pending_orders_list.popleft()
+        if self.environment.evaluation_type == "episodes":
+            if order.arrival_time == float('inf'):
+                order.arrival_time = self.clock().tick
+
         self._carries_package = True
-        self.locations[Location.DELIVERY_LOCATION] = (order.location[0],order.location[1],self.speed())
+        # self.locations[Location.DELIVERY_LOCATION] = (order.location[0],order.location[1],self.speed())
+        self.locations[Location.DELIVERY_LOCATION] = (order.location[0],order.location[1],int(order.radius))
         self.attempted_delivery=order
+        self.environment.ongoing_attempts+=1
+
+        # print("GOOOOOOING!!!",len(self.pending_orders_list))
+        # print(self.attempted_delivery.location)
+        # print(self.attempted_delivery.weight)
+        # print(self.attempted_delivery.arrival_time)
+        # print(self.attempted_delivery.fulfillment_time)
+        # print(self.attempted_delivery.bid_start_time)
+
 
     def get_package_info(self):
         return self.attempted_delivery

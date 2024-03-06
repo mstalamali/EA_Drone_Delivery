@@ -7,11 +7,11 @@
     "y": 500,
     "radius": 50
   },
-  "simulation_steps": 86400,
-  "number_runs": 128,
+  "evaluation_type": "episodes",
+  "simulation_steps": 172800,
   "seed": 1445,
   "visualization": {
-    "activate": true,
+    "activate": false,
     "fps": 60,
     "graphics": false
   },
@@ -25,7 +25,7 @@
     "frame_weight": 10,
     "battery_weight": 10,
     "theoritical_battery_capacity": 800,
-    "min_battery_health": 1.0,
+    "min_battery_health": 0.5,
     "max_battery_health": 1.0,
     "communication_radius": 50,
     "noise_sampling_mu": 0.0,
@@ -38,18 +38,14 @@
       "class": "NaiveBehavior",
       "population_size": 25,
       "parameters": {
-        "high_threshold": 100.0, 
-        "low_threshold": 20.0,
-        "safety_threshold": 5.0
+        "working_threshold": 90.0
       }
     },
     {
       "class": "DecentralisedLearningBehavior",
       "population_size": 0,
       "parameters": {
-        "high_threshold": 60.0, 
-        "low_threshold": 20.0,
-        "safety_threshold": 5.0
+        "working_threshold": 60.0 
       }
     },
 
@@ -57,22 +53,23 @@
       "class": "CentralisedLearningBehavior",
       "population_size": 0,
       "parameters": {
-        "rotation_angle": 0
+        "working_threshold": 60.0 
       }
     }
   ],
   "orders": {
+    "orders_per_episode": 100,
     "orders_arrival_probability": 0.01,
     "interval_between_orders_arrivals": 1800,
     "min_distance": 1000,
     "max_distance": 8000,
-    "radius": 50,
+    "radius": 80,
     "min_package_weight": 1,
     "max_package_weight": 5
   },
   "data_collection": {
     "output_directory": "../data/test",
-    "filename": "time_evolution_S25_HIGH_THRESH_100.0_MINBH_1.0_1.txt",
+    "filename": "time_evolution_S25_HIGH_THRESH_100.0_MINBH_0.5_1.txt",
     "recording_interval": 1800
   }
 }

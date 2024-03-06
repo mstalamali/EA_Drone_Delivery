@@ -62,23 +62,24 @@ class MainController:
         self.environment = Environment(width=self.config.value_of("width"),
                                        height=self.config.value_of("height"),
                                        pixel_to_m=self.config.value_of("pixel_to_m"),
-                                       agent_params=self.config.value_of("agent"),
-                                       behavior_params=self.config.value_of("behaviors"),
                                        depot=self.config.value_of("depot"),
+                                       evaluation_type=self.config.value_of("evaluation_type"),
                                        order_params=config.value_of("orders"),
-                                       clock=self.clock)
+                                       clock=self.clock,
+                                       agent_params=self.config.value_of("agent"),
+                                       behavior_params=self.config.value_of("behaviors"))
         
         self.output_directory = self.config.value_of("data_collection")["output_directory"]
         self.filename = self.config.value_of("data_collection")["filename"]
 
         if self.filename is not None and self.filename != "":
             self.time_evolution_file = open(self.output_directory + "/time_evolution_" + self.filename,"w")
-            self.time_evolution_file.write("Time(s)\tDelivered\tFailed\tPending\n")
+            self.time_evolution_file.write("Time(s)\tDelivered\tPending\tFailed\n")
 
 
     def step(self):
 
-        if self.clock.tick < self.config.value_of("simulation_steps"):
+        if self.clock.tick < self.config.value_of("simulation_steps") or ( not (len(self.environment.successful_orders_list) == self.config.value_of("orders")['orders_per_episode']) and (self.config.value_of("evaluation_type")=="episodes")):
             self.clock.step()
             self.environment.step()
             if self.filename is not None or self.filename != "":
@@ -97,17 +98,20 @@ class MainController:
 
         if self.filename is not None or self.filename != "":
             self.record_delivery_time_data()
+            if (self.clock.tick % self.config.value_of("data_collection")['recording_interval'] != 0):
+                self.record_time_evolution_data(True)
             self.time_evolution_file.close()
 
     def get_robot_at(self, x, y):
         return self.environment.get_robot_at(x, y)
 
-    def record_time_evolution_data(self):
-        if self.clock.tick % self.config.value_of("data_collection")['recording_interval'] == 0:
-            self.time_evolution_file.write(str(self.clock.tick)+"\t"+\
-                str(len(self.environment.successful_orders_list))+"\t"+\
-                str(self.environment.failed_delivery_attempts)+"\t"+\
-                str(len(self.environment.pending_orders_list))+"\n")
+    def record_time_evolution_data(self,end=False):
+        if self.clock.tick % self.config.value_of("data_collection")['recording_interval'] == 0 or end:
+
+            successful = len(self.environment.successful_orders_list)
+            failed = self.environment.failed_delivery_attempts
+            pending = len(self.environment.pending_orders_list) + self.environment.ongoing_attempts
+            self.time_evolution_file.write(str(self.clock.tick)+'\t'+ str(successful)+'\t'+ str(pending)+'\t'+ str(failed)+'\n')
 
     def record_delivery_time_data(self):
         delivery_times_file = open(self.output_directory + "/delivery_times_" + self.filename,"w")

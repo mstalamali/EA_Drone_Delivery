@@ -44,7 +44,7 @@ class Behavior(ABC):
 
 
 class NaiveBehavior(Behavior):
-    def __init__(self,high_threshold = 60.0, low_threshold = 20.0, safety_threshold = 5.0):
+    def __init__(self,working_threshold = 60.0):
         super().__init__()
         self.state = State.INSIDE_DEPOT_AVAILABLE
         self.dr = np.array([0, 0]).astype('float64')
@@ -54,9 +54,7 @@ class NaiveBehavior(Behavior):
         self.my_bid = None
 
 # ----->To be specified from config file
-        self.high_threshold = high_threshold
-        self.low_threshold = low_threshold
-        self.safety_threshold = safety_threshold
+        self.working_threshold = working_threshold
 
     def step(self, api):
         # self.dr[0], self.dr[1] = 0, 0
@@ -74,7 +72,7 @@ class NaiveBehavior(Behavior):
         
         # print(self.state)
         # print(self.id,self.state)
-        print(self.id,self.state,api.get_battery_level())
+        # print(self.id,self.state,api.get_battery_level())
 
         if self.state == State.ATTEMPTING_DELIVERY or self.state == State.RETURNING_FAILED or self.state == State.RETURNING_SUCCESSFUL:
             self.navigation_table.set_relative_position_for_location(Location.DELIVERY_LOCATION, api.get_relative_position_to_location(Location.DELIVERY_LOCATION))
@@ -83,7 +81,7 @@ class NaiveBehavior(Behavior):
 
         if self.state == State.INSIDE_DEPOT_CHARGING:
 
-            if api.get_battery_level() >= self.high_threshold:
+            if api.get_battery_level() >= self.working_threshold:
                 self.state = State.INSIDE_DEPOT_AVAILABLE
 
         elif self.state == State.ATTEMPTING_DELIVERY:            
@@ -91,7 +89,7 @@ class NaiveBehavior(Behavior):
                 api.deliver_package()
                 self.state = State.RETURNING_SUCCESSFUL
 
-            elif (api.get_battery_level()-self.safety_threshold) <= self.takeoff_battery_level/2.0:
+            elif api.get_battery_level()  <= self.takeoff_battery_level/2.0:
                 self.state = State.RETURNING_FAILED
         
         elif self.state == State.RETURNING_FAILED:
@@ -110,19 +108,28 @@ class NaiveBehavior(Behavior):
                 self.learn(self.takeoff_battery_level,api.get_package_info(), 1)
 # ------------->Forget attempted delivery
 
-                if api.get_battery_level() >= self.high_threshold:
+                if api.get_battery_level() >= self.working_threshold:
                     self.state = State.INSIDE_DEPOT_AVAILABLE
                 else:
                     self.state = State.INSIDE_DEPOT_CHARGING
 
         elif self.state == State.INSIDE_DEPOT_AVAILABLE:
             
-            if api.get_battery_level() < self.high_threshold:
+            if api.get_battery_level() < self.working_threshold:
                 self.state = State.INSIDE_DEPOT_CHARGING
             
             else:
                 order = api.get_order()
+                
+                # print(">>>>>>>>>>>>><<<<<<<<<<<<<<<-")
+                # print(order.location)
+                # print(order.weight)
+                # print(order.arrival_time)
+                # print(order.fulfillment_time)
+                # print(order.bid_start_time)
+
                 if order != None and order.bid_start_time>=api.clock().tick:
+
                     api.get_order().bid_start_time = api.clock().tick
                     # ------------> communicate bid: id, current battery level, number of fails? maybe we should consider the order arrival time
                     self.my_bid = self.bidding_policy(api.get_battery_level(),order)
@@ -192,8 +199,8 @@ class NaiveBehavior(Behavior):
         return current_battery_level
 
 class DecentralisedLearningBehavior(NaiveBehavior):
-    def __init__(self, high_threshold = 60.0, low_threshold = 20.0, safety_threshold = 5.0):
-        super(DecentralisedLearningBehavior, self).__init__(high_threshold,low_threshold,safety_threshold)
+    def __init__(self, working_threshold = 60.0 ):
+        super(DecentralisedLearningBehavior, self).__init__(working_threshold)
 
     def bidding_policy(self,current_battery_level,order):
 #--> TO BE DESIGNED
@@ -206,8 +213,8 @@ class DecentralisedLearningBehavior(NaiveBehavior):
 
 
 class CentralisedLearningBehavior(NaiveBehavior):
-    def __init__(self, high_threshold = 60.0, low_threshold = 20.0, safety_threshold = 5.0):
-        super(CentralisedLearningBehavior, self).__init__(high_threshold,low_threshold,safety_threshold)
+    def __init__(self, working_threshold = 60.0):
+        super(CentralisedLearningBehavior, self).__init__(working_threshold)
 
     def bidding_policy(self,current_battery_level,order):
 #--> TO BE DESIGNED

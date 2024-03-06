@@ -14,7 +14,7 @@ except ModuleNotFoundError:
 
 class Environment:
 
-    def __init__(self, width, height, pixel_to_m, agent_params, behavior_params, depot, order_params, clock):
+    def __init__(self, width, height, pixel_to_m, depot, evaluation_type ,order_params, clock , agent_params, behavior_params):
         self.population = list()
         self.width = width * pixel_to_m
         self.height = height * pixel_to_m
@@ -23,17 +23,26 @@ class Environment:
         self.depot = (depot['x']*pixel_to_m, depot['y']*pixel_to_m, depot['radius']*pixel_to_m)  
         self.pending_orders_list = deque()
         self.successful_orders_list = deque()      
-        self.create_robots(agent_params, behavior_params)
         self.best_bot_id = self.get_best_bot_id()
         self.order_location_img = None
         self.package_image = None
         self.robot_image = None
         self.timestep = 0
         self.order_params = order_params        
-        self.failed_delivery_attempts = 0        
+        self.failed_delivery_attempts = 0
+        self.ongoing_attempts = 0        
         self.last_order_arrival = 0.0
         self.next_order_arrival = 0.0
-        
+        self.evaluation_type=evaluation_type
+
+        if evaluation_type == "episodes": #other option is "continuous":
+            self.create_episode_orders_list(order_params)
+        else:
+            self.update_pending_orders_list(order_params)
+
+
+        self.create_robots(agent_params, behavior_params)
+
         # test variables
         self.order_test = 0
 
@@ -57,9 +66,10 @@ class Environment:
         # print(self.clock.tick)
 
 
-
         # 2. Update orders' list
-        self.update_pending_orders_list(self.order_params)
+        if self.evaluation_type == "continuous":
+            self.update_pending_orders_list(self.order_params)
+
 
         # 4. Execture robot step
         for robot in self.population:
@@ -84,6 +94,19 @@ class Environment:
 
         # print(self.clock.tick,len(self.successful_orders_list),self.failed_delivery_attempts)
 
+
+    def create_episode_orders_list(self, order_params):
+        while len(self.pending_orders_list)<order_params['orders_per_episode']:
+            self.pending_orders_list.append(Order(self.width, self.height, self.depot,float('inf'), order_params))
+
+        # for i in range(len(self.pending_orders_list)):
+        #     print(self.pending_orders_list[i].location)
+        #     print(self.pending_orders_list[i].weight)
+        #     print(self.pending_orders_list[i].arrival_time)
+        #     print(self.pending_orders_list[i].fulfillment_time)
+        #     print(self.pending_orders_list[i].bid_start_time)
+
+
     def update_pending_orders_list(self, order_params):
         # print(order_params['orders_arrival_probability'])
         # print(order_params['max_package_weight'])
@@ -95,6 +118,7 @@ class Environment:
             self.pending_orders_list.append(Order(self.width, self.height, self.depot,self.clock.tick, order_params))
             self.next_order_arrival = expovariate(1.0/order_params["interval_between_orders_arrivals"])
             self.last_order_arrival = self.clock.tick
+
 
         # if self.order_test < 1:
         #     self.pending_orders_list.append(Order(self.width, self.height, self.depot, {

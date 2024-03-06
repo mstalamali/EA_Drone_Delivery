@@ -7,8 +7,9 @@
     "y": 500,
     "radius": 50
   },
+  "evaluation_type": "EVAL_TYPE",
   "simulation_steps": TIME_STEPS,
-  "number_runs": 128,
+  "orders_per_episode": ORDERS_PER_EPISODE,
   "seed": SEED,
   "visualization": {
     "activate": false,
@@ -38,18 +39,14 @@
       "class": "NaiveBehavior",
       "population_size": S_NAIVE,
       "parameters": {
-        "high_threshold": HIGH_THRESH, 
-        "low_threshold": LOW_THRESH,
-        "safety_threshold": SAFETY_THRESH
+        "working_threshold": HIGH_THRESH 
       }
     },
     {
       "class": "DecentralisedLearningBehavior",
       "population_size": S_DECENTRALISED_LEARNING,
       "parameters": {
-        "high_threshold": HIGH_THRESH, 
-        "low_threshold": LOW_THRESH,
-        "safety_threshold": SAFETY_THRESH
+        "working_threshold": HIGH_THRESH 
       }
     },
 
@@ -57,9 +54,7 @@
       "class": "CentralisedLearningBehavior",
       "population_size": S_CENTRALISED_LEARNING,
       "parameters": {
-        "high_threshold": HIGH_THRESH, 
-        "low_threshold": LOW_THRESH,
-        "safety_threshold": SAFETY_THRESH
+        "working_threshold": HIGH_THRESH 
       }
     }
   ],
