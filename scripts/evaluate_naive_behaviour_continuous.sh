@@ -75,11 +75,11 @@ sed -e "s|TIME_STEPS|${TIME_STEPS}|" \
 
 # -------------------------------------- SET CHANGING EXPERIMENT VARIABLES -------------------------------------- #
 
-NUMBER_OF_ROBOTS_LIST=(25 50)
+NUMBER_OF_ROBOTS_LIST=(25)
 
 MIN_BH_LIST=(0.5 1.0)
 
-WORKING_THRESH_LIST=(70.0 80.0 90.0)
+WORKING_THRESH_LIST=(50.0 70.0 90.0)
 
 for WORKING_THRESH in ${WORKING_THRESH_LIST[*]}; do
 
