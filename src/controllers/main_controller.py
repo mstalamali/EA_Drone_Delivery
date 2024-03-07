@@ -117,6 +117,8 @@ class MainController:
             self.record_delivery_time_data()
             self.environment.check_orders_being_attempted()
             self.record_pending_orders_data()
+            self.record_robot_data()
+
             if (self.clock.tick % self.config.value_of("data_collection")['recording_interval'] != 0):
                 self.record_time_evolution_data(True)
             self.time_evolution_file.close()
@@ -155,7 +157,7 @@ class MainController:
 
 
     def record_robot_data(self):
-        robots_log_file = open(self.output_directory + "/pending_orders_" + self.filename,"w")
+        robots_log_file = open(self.output_directory + "/robots_log_" + self.filename,"w")
         robots_log_file.write("id\tSoC\tSoH\tDelivered\tFailed\n")
         for robot in self.environment.population:
             robots_log_file.write(str(robot.id)+"\t"+str(robot.get_battery_level())+"\t"+str(robot.battery_health)+"\t"+str(robot.items_delivered)+"\t"+str(robot.failed_deliveries)+"\n")

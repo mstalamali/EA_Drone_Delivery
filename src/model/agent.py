@@ -305,18 +305,31 @@ class Agent:
         self.environment.number_of_successes += 1
         self.environment.ongoing_attempts -= 1
 
+    # def return_package(self):
+    #     self._carries_package = False
+    #     self.attempted_delivery.bid_start_time = float('inf')
+
+    #     if self.get_order() == None:
+    #         self.pending_orders_list.appendleft(self.attempted_delivery)
+    #     else:
+    #         if self.pending_orders_list[0].bid_start_time > self.clock().tick:
+    #             self.pending_orders_list.appendleft(self.attempted_delivery)
+    #         else:
+    #             self.pending_orders_list.insert(1,self.attempted_delivery)
+
+    #     self.attempted_delivery = None
+    #     self.failed_deliveries+=1
+    #     self.environment.failed_delivery_attempts+=1
+    #     self.environment.ongoing_attempts-=1
+
+
     def return_package(self):
         self._carries_package = False
         self.attempted_delivery.bid_start_time = float('inf')
-
-        if self.get_order() == None:
-            self.pending_orders_list.appendleft(self.attempted_delivery)
-        else:
-            if self.pending_orders_list[0].bid_start_time > self.clock().tick:
-                self.pending_orders_list.appendleft(self.attempted_delivery)
-            else:
-                self.pending_orders_list.insert(1,self.attempted_delivery)
-
+        
+        # Put back the failed order at the end of the queue
+        self.pending_orders_list.append(self.attempted_delivery)
+        
         self.attempted_delivery = None
         self.failed_deliveries+=1
         self.environment.failed_delivery_attempts+=1
