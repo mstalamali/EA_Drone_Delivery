@@ -336,3 +336,9 @@ class Environment:
     # def pickup_package(self, robot):
     #     robot.pickup_package()
     #     self.foraging_spawns[Location.DELIVERY_LOCATION].pop(robot.id)
+    
+    def check_orders_being_attempted(self):
+        if self.ongoing_attempts > 0:
+            for robot in self.population:
+                if robot.carries_package():
+                    self.pending_orders_list.appendleft(robot.attempted_delivery)

@@ -8,7 +8,7 @@
     "radius": 50
   },
   "evaluation_type": "continuous",
-  "simulation_steps": 172800,
+  "simulation_steps": 2800,
   "episodes_no": 10,
   "seed": 1445,
   "visualization": {
@@ -26,7 +26,7 @@
     "frame_weight": 10,
     "battery_weight": 10,
     "theoritical_battery_capacity": 800,
-    "min_battery_health": 1.0,
+    "min_battery_health": 0.5,
     "max_battery_health": 1.0,
     "communication_radius": 50,
     "noise_sampling_mu": 0.0,
@@ -37,9 +37,9 @@
   "behaviors": [
     {
       "class": "NaiveBehavior",
-      "population_size": 10,
+      "population_size": 50,
       "parameters": {
-        "working_threshold": 90.0
+        "working_threshold": 70.0
       }
     },
     {
@@ -61,7 +61,7 @@
   "orders": {
     "orders_per_episode": 10,
     "orders_arrival_probability": 0.01,
-    "interval_between_orders_arrivals": 1800,
+    "interval_between_orders_arrivals": 100,
     "min_distance": 1000,
     "max_distance": 8000,
     "radius": 80,
@@ -70,7 +70,7 @@
   },
   "data_collection": {
     "output_directory": "../data/test",
-    "filename": "time_evolution_S25_HIGH_THRESH_100.0_MINBH_0.5_1.txt",
+    "filename": "test.txt",
     "recording_interval": 1800
   }
 }

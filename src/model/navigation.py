@@ -13,8 +13,8 @@ class Order:
         while True:
             self.location = [ random() * env_width , random() * env_height] 
             dist_vector = self.location - np.array([depot[0], depot[1]])
-            dist_from_center = np.sqrt(dist_vector.dot(dist_vector))
-            if dist_from_center >= order_params["min_distance"] and dist_from_center <= order_params["max_distance"]:
+            self.distance = np.sqrt(dist_vector.dot(dist_vector))
+            if self.distance >= order_params["min_distance"] and self.distance <= order_params["max_distance"]:
                 break
     
         self.weight = uniform(order_params["min_package_weight"], order_params["max_package_weight"])
@@ -26,6 +26,8 @@ class Order:
         self.fulfillment_time = float('inf')
 
         self.bid_start_time = float('inf')
+
+        self.attempted = 0
 
         # print(self.location,self.weight)
 

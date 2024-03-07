@@ -332,6 +332,7 @@ class Agent:
         # self.locations[Location.DELIVERY_LOCATION] = (order.location[0],order.location[1],self.speed())
         self.locations[Location.DELIVERY_LOCATION] = (order.location[0],order.location[1],int(order.radius))
         self.attempted_delivery=order
+        self.attempted_delivery.attempted+=1
         self.environment.ongoing_attempts+=1
 
         # print("GOOOOOOING!!!",len(self.pending_orders_list))

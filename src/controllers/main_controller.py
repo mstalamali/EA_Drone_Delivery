@@ -115,6 +115,8 @@ class MainController:
     def save_final_data(self):
         if self.filename is not None or self.filename != "":
             self.record_delivery_time_data()
+            self.environment.check_orders_being_attempted()
+            self.record_pending_orders_data()
             if (self.clock.tick % self.config.value_of("data_collection")['recording_interval'] != 0):
                 self.record_time_evolution_data(True)
             self.time_evolution_file.close()
@@ -139,12 +141,27 @@ class MainController:
 
     def record_delivery_time_data(self):
         delivery_times_file = open(self.output_directory + "/delivery_times_" + self.filename,"w")
-        delivery_times_file.write("Arrived\tDelivered\tTook\n")
+        delivery_times_file.write("Arrived\tDelivered\tTook\tAttempted\n")
         for order in self.environment.successful_orders_list:
-            delivery_times_file.write(str(order.arrival_time)+"\t"+str(order.fulfillment_time)+"\t"+str(order.fulfillment_time-order.arrival_time)+"\n")
+            delivery_times_file.write(str(order.arrival_time)+"\t"+str(order.fulfillment_time)+"\t"+str(order.fulfillment_time-order.arrival_time)+"\t"+str(order.attempted)+"\n")
         delivery_times_file.close()
 
+    def record_pending_orders_data(self):
+        pending_orders_file = open(self.output_directory + "/pending_orders_" + self.filename,"w")
+        pending_orders_file.write("Arrived\tDistance\tWeight\tAttempted\n")
+        for order in self.environment.pending_orders_list:
+            pending_orders_file.write(str(order.arrival_time)+"\t"+str(order.distance)+"\t"+str(order.weight)+"\t"+str(order.attempted)+"\n")
+        pending_orders_file.close()
 
+
+    def record_robot_data(self):
+        robots_log_file = open(self.output_directory + "/pending_orders_" + self.filename,"w")
+        robots_log_file.write("id\tSoC\tSoH\tDelivered\tFailed\n")
+        for robot in self.environment.population:
+            robots_log_file.write(str(robot.id)+"\t"+str(robot.get_battery_level())+"\t"+str(robot.battery_health)+"\t"+str(robot.items_delivered)+"\t"+str(robot.failed_deliveries)+"\n")
+        robots_log_file.close()
+
+        
 
 #   Data retrieval functions
 
