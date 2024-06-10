@@ -47,7 +47,7 @@ class Agent:
     colors = {State.INSIDE_DEPOT_CHARGING: "red", State.INSIDE_DEPOT_MADE_BID: "orange", State.INSIDE_DEPOT_AVAILABLE: "green",\
                 State.ATTEMPTING_DELIVERY: "cyan", State.RETURNING_SUCCESSFUL: "magenta", State.RETURNING_FAILED: "gray"}
 
-    def __init__(self, robot_id, x, y, environment, behavior_params, clock, speed, radius, frame_weight, battery_weight,
+    def __init__(self, robot_id, x, y, environment, behavior_params,order_params, clock, speed, radius, frame_weight, battery_weight,
                  theoritical_battery_capacity, min_battery_health, max_battery_health, noise_sampling_mu, noise_sampling_sigma, noise_sd, fuel_cost,
                  communication_radius):
 
@@ -62,11 +62,14 @@ class Agent:
 
         self.pending_orders_list = environment.pending_orders_list
         self.successful_orders_list = environment.successful_orders_list
+        self.failed_orders_list = environment.failed_orders_list
 
         # Set battery-related variables
         # --> Initial Values
         self.theoritical_battery_capacity = theoritical_battery_capacity
         self.battery_health = uniform(min_battery_health,max_battery_health)
+        # print(self.id,self.battery_health)
+
         # self.battery_health = 1.0
         self.actual_battery_capacity = self.theoritical_battery_capacity*self.battery_health
 
@@ -100,7 +103,7 @@ class Agent:
 
         self.dr = np.array([0, 0])
         self.sensors = {}
-        self.behavior = behavior_factory(behavior_params)
+        self.behavior = behavior_factory(behavior_params,order_params)
 
         self.attempted_delivery = None
 
@@ -328,8 +331,11 @@ class Agent:
         self.attempted_delivery.bid_start_time = float('inf')
         
         # Put back the failed order at the end of the queue
-        self.pending_orders_list.append(self.attempted_delivery)
-        
+        # self.pending_orders_list.append(self.attempted_delivery)
+
+        # Put back the failed order at the human-based delivery queue
+        self.failed_orders_list.append(self.attempted_delivery)
+
         self.attempted_delivery = None
         self.failed_deliveries+=1
         self.environment.failed_delivery_attempts+=1

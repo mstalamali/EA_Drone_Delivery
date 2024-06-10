@@ -8,11 +8,11 @@
     "radius": 50
   },
   "evaluation_type": "continuous",
-  "simulation_steps": 2800,
+  "simulation_steps": 2419200,
   "episodes_no": 10,
-  "seed": 1445,
+  "seed": 1992,
   "visualization": {
-    "activate": false,
+    "activate": true,
     "fps": 60,
     "graphics": false
   },
@@ -37,16 +37,17 @@
   "behaviors": [
     {
       "class": "NaiveBehavior",
-      "population_size": 50,
+      "population_size": 0,
       "parameters": {
-        "working_threshold": 70.0
+        "working_threshold": 50.0
       }
     },
     {
       "class": "DecentralisedLearningBehavior",
-      "population_size": 0,
+      "population_size": 25,
       "parameters": {
-        "working_threshold": 60.0 
+        "working_threshold": 50.0,
+        "exploration_probability": 0.001
       }
     },
 
@@ -59,14 +60,23 @@
     }
   ],
   "orders": {
-    "orders_per_episode": 10,
-    "orders_arrival_probability": 0.01,
-    "interval_between_orders_arrivals": 100,
-    "min_distance": 1000,
-    "max_distance": 8000,
+
+    "times":{
+      "orders_per_episode": 10,
+      "orders_arrival_probability": 0.01,
+      "interval_between_orders_arrivals": 900
+    },
+
+    "distances":{
+      "min_distance": 500,
+      "max_distance": 8000
+    },
+    "weights":{
+    "min_package_weight": 0.5,
+    "max_package_weight": 5.0
+    },
     "radius": 80,
-    "min_package_weight": 1,
-    "max_package_weight": 5
+    "look_ahead_size": 10 
   },
   "data_collection": {
     "output_directory": "../data/test",

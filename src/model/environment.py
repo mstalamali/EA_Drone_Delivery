@@ -22,7 +22,8 @@ class Environment:
         self.clock = clock        
         self.depot = (depot['x']*pixel_to_m, depot['y']*pixel_to_m, depot['radius']*pixel_to_m)  
         self.pending_orders_list = deque()
-        self.successful_orders_list = deque()      
+        self.successful_orders_list = deque()
+        self.failed_orders_list = deque()      
         self.best_bot_id = self.get_best_bot_id()
         self.order_location_img = None
         self.package_image = None
@@ -42,7 +43,7 @@ class Environment:
             self.update_pending_orders_list(order_params)
 
 
-        self.create_robots(agent_params, behavior_params)
+        self.create_robots(agent_params, behavior_params,order_params)
 
         # test variables
         self.order_test = 0
@@ -93,11 +94,11 @@ class Environment:
             robot.communicate(neighbors_table[robot.id])
 
 
-        # print(self.clock.tick,len(self.successful_orders_list),self.failed_delivery_attempts)
+        # print(self.clock.tick,len(self.pending_orders_list),len(self.successful_orders_list),len(self.failed_orders_list))
 
 
     def create_episode_orders_list(self):
-        while len(self.pending_orders_list)<self.order_params['orders_per_episode']:
+        while len(self.pending_orders_list)<self.order_params["times"]['orders_per_episode']:
             self.pending_orders_list.append(Order(self.width, self.height, self.depot,float('inf'), self.order_params))
 
         # for i in range(len(self.pending_orders_list)):
@@ -117,8 +118,10 @@ class Environment:
 
         if self.clock.tick >= self.last_order_arrival + self.next_order_arrival:
             self.pending_orders_list.append(Order(self.width, self.height, self.depot,self.clock.tick, order_params))
-            self.next_order_arrival = expovariate(1.0/order_params["interval_between_orders_arrivals"])
+            self.next_order_arrival = expovariate(1.0/order_params["times"]["interval_between_orders_arrivals"])
             self.last_order_arrival = self.clock.tick
+
+        # Check the queue
 
 
         # if self.order_test < 1:
@@ -132,7 +135,7 @@ class Environment:
         #           }))
         #     self.order_test+=1
 
-    def create_robots(self, agent_params, behavior_params):
+    def create_robots(self, agent_params, behavior_params,order_params):
         robot_id = 0
         for behavior_params in behavior_params:
             for _ in range(behavior_params['population_size']):
@@ -143,6 +146,7 @@ class Environment:
                               y=self.depot[1],
                               environment=self,
                               behavior_params=behavior_params,
+                              order_params=order_params,
                               clock=self.clock,
                               **agent_params)
                 robot_id += 1

@@ -46,7 +46,8 @@
       "class": "DecentralisedLearningBehavior",
       "population_size": S_DECENTRALISED_LEARNING,
       "parameters": {
-        "working_threshold": WORKING_THRESH 
+        "working_threshold": WORKING_THRESH,
+        "exploration_probability": EXPLORATION_PROBABILITY
       }
     },
 
@@ -59,14 +60,21 @@
     }
   ],
   "orders": {
-    "orders_per_episode": ORDERS_PER_EPISODE,
-    "orders_arrival_probability": 0.01,
-    "interval_between_orders_arrivals": ORDER_ARRIVAL_INTERVAL,
-    "min_distance": MIN_PACKAGE_DISTANCE,
-    "max_distance": MAX_PACKAGE_DISTANCE,
-    "radius": 50,
-    "min_package_weight": MIN_PACKAGE_WEIGHT,
-    "max_package_weight": MAX_PACKAGE_WEIGHT
+    "times":{
+      "orders_per_episode": ORDERS_PER_EPISODE,
+      "orders_arrival_probability": 0.01,
+      "interval_between_orders_arrivals": ORDER_ARRIVAL_INTERVAL
+    },
+
+    "distances":{
+      "min_distance": MIN_PACKAGE_DISTANCE,
+      "max_distance": MAX_PACKAGE_DISTANCE
+    },
+    "weights":{
+      "min_package_weight": MIN_PACKAGE_WEIGHT,
+      "max_package_weight": MAX_PACKAGE_WEIGHT
+    },
+    "radius": 80
   },
   "data_collection": {
     "output_directory": "DATA_FOLDER",

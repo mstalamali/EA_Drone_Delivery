@@ -14,10 +14,10 @@ class Order:
             self.location = [ random() * env_width , random() * env_height] 
             dist_vector = self.location - np.array([depot[0], depot[1]])
             self.distance = np.sqrt(dist_vector.dot(dist_vector))
-            if self.distance >= order_params["min_distance"] and self.distance <= order_params["max_distance"]:
+            if self.distance >= order_params["distances"]["min_distance"] and self.distance <= order_params["distances"]["max_distance"]:
                 break
     
-        self.weight = uniform(order_params["min_package_weight"], order_params["max_package_weight"])
+        self.weight = uniform(order_params["weights"]["min_package_weight"], order_params["weights"]["max_package_weight"])
 
         self.radius = order_params["radius"]
 
@@ -26,6 +26,8 @@ class Order:
         self.fulfillment_time = float('inf')
 
         self.bid_start_time = float('inf')
+
+        self.in_look_ahead = float('inf')
 
         self.attempted = 0
 
