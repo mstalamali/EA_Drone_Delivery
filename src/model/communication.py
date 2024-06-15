@@ -19,7 +19,6 @@ class CommunicationSession:
             if self._bids.count(self._bids[index]) == 1:
                 return [max_value, self._bidders[index]]
             else:
-
                 bidders_with_max_bid = [self._bidders[i] for i in range(len(self._bidders)) if self._bids[i] == max_value]
                 return [max_value, max(bidders_with_max_bid)]
         else:

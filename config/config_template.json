@@ -43,20 +43,36 @@
       }
     },
     {
-      "class": "DecentralisedLearningBehavior",
-      "population_size": S_DECENTRALISED_LEARNING,
+      "class": "DecentralisedLearningBehavior_HeuristicBids",
+      "population_size": S_DECENTRALISED_LEARNING_HEURISTIC,
       "parameters": {
         "working_threshold": WORKING_THRESH,
         "exploration_probability": EXPLORATION_PROBABILITY
       }
     },
-
     {
-      "class": "CentralisedLearningBehavior",
-      "population_size": S_CENTRALISED_LEARNING,
+      "class": "DecentralisedLearningBehavior_DistanceBids",
+      "population_size": S_DECENTRALISED_LEARNING_DISTANCE,
       "parameters": {
-        "working_threshold": WORKING_THRESH 
+        "working_threshold": WORKING_THRESH,
+        "exploration_probability": EXPLORATION_PROBABILITY
       }
+    },
+    {
+      "class": "DecentralisedLearningBehavior_DistanceHuberBids",
+      "population_size": S_DECENTRALISED_LEARNING_DISTANCE_HUBER,
+      "parameters": {
+        "working_threshold": WORKING_THRESH,
+        "exploration_probability": EXPLORATION_PROBABILITY
+      }
+    },
+     {
+    "class": "DecentralisedLearningBehavior_ProbabilityBids",
+    "population_size": S_DECENTRALISED_LEARNING_PROBABILITY,
+    "parameters": {
+      "working_threshold": WORKING_THRESH,
+      "exploration_probability": EXPLORATION_PROBABILITY
+    }
     }
   ],
   "orders": {
@@ -74,7 +90,9 @@
       "min_package_weight": MIN_PACKAGE_WEIGHT,
       "max_package_weight": MAX_PACKAGE_WEIGHT
     },
-    "radius": 80
+    "radius": 80,
+    "look_ahead_size": LOOK_AHEAD_SIZE,
+    "timeout": TIMEOUT 
   },
   "data_collection": {
     "output_directory": "DATA_FOLDER",

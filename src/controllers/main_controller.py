@@ -138,7 +138,7 @@ class MainController:
         if self.clock.tick % self.config.value_of("data_collection")['recording_interval'] == 0 or end:
             successful = len(self.environment.successful_orders_list)
             failed = self.environment.failed_delivery_attempts
-            pending = len(self.environment.pending_orders_list) + self.environment.ongoing_attempts
+            pending = len(self.environment.pending_orders_list)+ len(self.environment.lookahead_list) + self.environment.ongoing_attempts
             self.time_evolution_file.write(str(self.clock.tick)+'\t'+ str(successful)+'\t'+ str(pending)+'\t'+ str(failed)+'\n')
 
     def record_delivery_time_data(self):

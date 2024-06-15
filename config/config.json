@@ -8,11 +8,11 @@
     "radius": 50
   },
   "evaluation_type": "continuous",
-  "simulation_steps": 2419200,
+  "simulation_steps": 10001,
   "episodes_no": 10,
   "seed": 1992,
   "visualization": {
-    "activate": true,
+    "activate": false,
     "fps": 60,
     "graphics": false
   },
@@ -43,19 +43,37 @@
       }
     },
     {
-      "class": "DecentralisedLearningBehavior",
+      "class": "DecentralisedLearningBehavior_HeuristicBids",
       "population_size": 25,
       "parameters": {
         "working_threshold": 50.0,
-        "exploration_probability": 0.001
+        "exploration_probability": 0.0
       }
     },
 
     {
-      "class": "CentralisedLearningBehavior",
+      "class": "DecentralisedLearningBehavior_DistanceBids",
       "population_size": 0,
       "parameters": {
-        "working_threshold": 60.0 
+        "working_threshold": 50.0,
+        "exploration_probability": 0.0
+      }
+    },
+    {
+      "class": "DecentralisedLearningBehavior_DistanceHuberBids",
+      "population_size": 0,
+      "parameters": {
+        "working_threshold": 50.0,
+        "exploration_probability": 0.0
+      }
+    },
+
+      {
+      "class": "DecentralisedLearningBehavior_ProbabilityBids",
+      "population_size": 0,
+      "parameters": {
+        "working_threshold": 50.0,
+        "exploration_probability": 0.0
       }
     }
   ],
@@ -64,7 +82,7 @@
     "times":{
       "orders_per_episode": 10,
       "orders_arrival_probability": 0.01,
-      "interval_between_orders_arrivals": 900
+      "interval_between_orders_arrivals": 100
     },
 
     "distances":{
@@ -76,7 +94,8 @@
     "max_package_weight": 5.0
     },
     "radius": 80,
-    "look_ahead_size": 10 
+    "look_ahead_size": 10,
+    "timeout": 3600 
   },
   "data_collection": {
     "output_directory": "../data/test",

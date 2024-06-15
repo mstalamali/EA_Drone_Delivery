@@ -4,13 +4,12 @@ from enum import Enum
 from math import cos, radians, sin
 from sklearn.linear_model import SGDClassifier
 from sklearn.preprocessing import StandardScaler
-
 import numpy as np
 
 from model.communication import CommunicationSession
 from model.navigation import Location, NavigationTable, Order, Target
 from helpers.utils import get_orientation_from_vector, norm
-from random import random
+from random import random,randint
 
 class State(Enum):
     INSIDE_DEPOT_AVAILABLE = 1
@@ -222,9 +221,9 @@ class NaiveBehavior(Behavior):
     def formulate_bid(self,order,battery_level):
         return battery_level
 
-class DecentralisedLearningBehavior(NaiveBehavior):
+class DecentralisedLearningBehavior_HeuristicBids(NaiveBehavior):
     def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
-        super(DecentralisedLearningBehavior, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
+        super(DecentralisedLearningBehavior_HeuristicBids, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
         
         self.epsilon = exploration_probability
 
@@ -232,7 +231,7 @@ class DecentralisedLearningBehavior(NaiveBehavior):
         self.scaler = StandardScaler()
         
         # Create an SGD classifier with a hinge loss (SVM)
-        self.sgd_clf = SGDClassifier(loss='hinge',warm_start=True)
+        self.sgd_clf = SGDClassifier(loss='hinge',warm_start=True,random_state=randint(0,2**32 - 1))
 
         # Initialise decision model
         X = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
@@ -248,7 +247,7 @@ class DecentralisedLearningBehavior(NaiveBehavior):
         if predicted_outcome == 1.0:
             return True
         else:
-            if np.random.uniform() <= self.epsilon:
+            if random() <= self.epsilon:
                 # print(self.id,"exploring") # <-----------------------------
                 return True
             else:
@@ -260,19 +259,169 @@ class DecentralisedLearningBehavior(NaiveBehavior):
     # def learn(take_off_battery_level, package_location, package_weight, reward):
     def learn(self,state, outcome):
         # print("learn",self.id,state,outcome) # <-----------------------------
+        state_scaled = self.scaler.transform([state]) # CHANGE: changed transform to fit_transform
+        self.sgd_clf.partial_fit(state_scaled, [outcome])
+
+class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
+    def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
+        super(DecentralisedLearningBehavior_DistanceBids, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
+        
+        self.epsilon = exploration_probability
+
+        # Initialize the scaler and the online SVM classifier
+        self.scaler = StandardScaler()
+        
+        # Create an SGD classifier with a hinge loss (SVM)
+        self.sgd_clf = SGDClassifier(loss='hinge',warm_start=True,random_state=randint(0,2**32 - 1))
+
+        # Initialise decision model
+        X = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
+        y = [1.0,0.0]
+        X_scaled = self.scaler.fit_transform(X)
+        self.sgd_clf.partial_fit(X_scaled, y, classes=np.unique(y))
+
+    def bidding_policy(self,state):
         state_scaled = self.scaler.transform([state])
+        predicted_outcome = self.sgd_clf.predict(state_scaled)
+
+        # print("predict",self.id,state,predicted_outcome) # <-----------------------------
+        if predicted_outcome == 1.0:
+            return True
+        else:
+            if random() <= self.epsilon:
+                # print(self.id,"exploring") # <-----------------------------
+                return True
+            else:
+                return False
+
+    def formulate_bid(self,order,battery_level):
+        
+        state = [order.distance,order.weight,battery_level]
+
+        state_scaled = self.scaler.transform([state])
+        
+        raw_distance = self.sgd_clf.decision_function(state_scaled)[0]
+
+        weight_norm = np.linalg.norm(self.sgd_clf.coef_)
+
+        normalised_distance = raw_distance/weight_norm
+
+        return 1.0 - normalised_distance
+
+    # def learn(take_off_battery_level, package_location, package_weight, reward):
+    def learn(self,state, outcome):
+        # print("learn",self.id,state,outcome) # <-----------------------------
+        state_scaled = self.scaler.transform([state]) # CHANGE: changed transform to fit_transform
         self.sgd_clf.partial_fit(state_scaled, [outcome])
 
 
-class CentralisedLearningBehavior(NaiveBehavior):
-    def __init__(self, working_threshold = 60.0):
-        super(CentralisedLearningBehavior, self).__init__(working_threshold)
+class DecentralisedLearningBehavior_DistanceHuberBids(NaiveBehavior):
+    def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
+        super(DecentralisedLearningBehavior_DistanceHuberBids, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
+        
+        self.epsilon = exploration_probability
 
-    def bidding_policy(self,current_battery_level,order):
-#--> TO BE DESIGNED
-        return current_battery_level
+        # Initialize the scaler and the online SVM classifier
+        self.scaler = StandardScaler()
+        
+        # Create an SGD classifier with a hinge loss (SVM)
+        self.sgd_clf = SGDClassifier(loss='modified_huber',warm_start=True,random_state=randint(0,2**32 - 1))
+
+        # Initialise decision model
+        X = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
+        y = [1.0,0.0]
+        X_scaled = self.scaler.fit_transform(X)
+        self.sgd_clf.partial_fit(X_scaled, y, classes=np.unique(y))
+
+    def bidding_policy(self,state):
+        state_scaled = self.scaler.transform([state])
+        predicted_outcome = self.sgd_clf.predict(state_scaled)
+
+        # print("predict",self.id,state,predicted_outcome) # <-----------------------------
+        if predicted_outcome == 1.0:
+            return True
+        else:
+            if random() <= self.epsilon:
+                # print(self.id,"exploring") # <-----------------------------
+                return True
+            else:
+                return False
+
+    def formulate_bid(self,order,battery_level):
+        
+        state = [order.distance,order.weight,battery_level]
+
+        state_scaled = self.scaler.transform([state])
+        
+        raw_distance = self.sgd_clf.decision_function(state_scaled)[0]
+
+        weight_norm = np.linalg.norm(self.sgd_clf.coef_)
+
+        normalised_distance = raw_distance/weight_norm
+
+        return 1.0 - normalised_distance
+
+    # def learn(take_off_battery_level, package_location, package_weight, reward):
+    def learn(self,state, outcome):
+        # print("learn",self.id,state,outcome) # <-----------------------------
+        state_scaled = self.scaler.transform([state]) # CHANGE: changed transform to fit_transform
+        self.sgd_clf.partial_fit(state_scaled, [outcome])
 
 
-    def learn(take_off_battery_level, package_location, package_weight, reward):
-#--> TO BE DESIGNED
-        pass
+
+class DecentralisedLearningBehavior_ProbabilityBids(NaiveBehavior):
+    def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
+        super(DecentralisedLearningBehavior_ProbabilityBids, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
+        
+        self.epsilon = exploration_probability
+
+        # Initialize the scaler and the online SVM classifier
+        self.scaler = StandardScaler()
+        
+        # Create an SGD classifier with a hinge loss (SVM)
+        self.sgd_clf = SGDClassifier(loss='log_loss',warm_start=True,random_state=randint(0,2**32 - 1))
+
+        # Initialise decision model
+        X = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
+        y = [1.0,0.0]
+        X_scaled = self.scaler.fit_transform(X)
+        self.sgd_clf.partial_fit(X_scaled, y, classes=np.unique(y))
+
+    def bidding_policy(self,state):
+        state_scaled = self.scaler.transform([state])
+        predicted_outcome = self.sgd_clf.predict(state_scaled)
+
+        # print("predict",self.id,state,predicted_outcome) # <-----------------------------
+        if predicted_outcome == 1.0:
+            return True
+        else:
+            if random() <= self.epsilon:
+                # print(self.id,"exploring") # <-----------------------------
+                return True
+            else:
+                return False
+
+    def formulate_bid(self,order,battery_level):
+        state = [order.distance,order.weight,battery_level]
+        state_scaled = self.scaler.transform([state])
+        # print(self.id,self.sgd_clf.predict_proba(state_scaled)[0][0])
+        return self.sgd_clf.predict_proba(state_scaled)[0][0]
+
+    # def learn(take_off_battery_level, package_location, package_weight, reward):
+    def learn(self,state, outcome):
+        # print("learn",self.id,state,outcome) # <-----------------------------
+        state_scaled = self.scaler.transform([state]) # CHANGE: changed transform to fit_transform
+        self.sgd_clf.partial_fit(state_scaled, [outcome])
+
+# class CentralisedLearningBehavior(NaiveBehavior):
+#     def __init__(self, working_threshold = 60.0):
+#         super(CentralisedLearningBehavior, self).__init__(working_threshold)
+
+#     def bidding_policy(self,current_battery_level,order):
+# #--> TO BE DESIGNED
+#         return current_battery_level
+
+
+#     def learn(take_off_battery_level, package_location, package_weight, reward):
+# #--> TO BE DESIGNED
+#         pass

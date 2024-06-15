@@ -20,7 +20,8 @@ class Environment:
         self.height = height * pixel_to_m
         self.pixel_to_m = pixel_to_m
         self.clock = clock        
-        self.depot = (depot['x']*pixel_to_m, depot['y']*pixel_to_m, depot['radius']*pixel_to_m)  
+        self.depot = (depot['x']*pixel_to_m, depot['y']*pixel_to_m, depot['radius']*pixel_to_m)
+        self.lookahead_list = deque()  
         self.pending_orders_list = deque()
         self.successful_orders_list = deque()
         self.failed_orders_list = deque()      
@@ -29,7 +30,7 @@ class Environment:
         self.package_image = None
         self.robot_image = None
         self.timestep = 0
-        self.order_params = order_params        
+        self.order_params = order_params       
         self.failed_delivery_attempts = 0
         self.ongoing_attempts = 0
         self.number_of_successes = 0        
@@ -94,6 +95,15 @@ class Environment:
             robot.communicate(neighbors_table[robot.id])
 
 
+        # 4. move packages
+        if len(self.lookahead_list) > 1:
+            if self.lookahead_list[0].bid_start_time>self.clock.tick:
+                self.lookahead_list.rotate(-1)
+
+        # print(len(self.lookahead_list),len(self.pending_orders_list))
+        # if len(self.lookahead_list)>0:
+        #     print("time",self.clock.tick,self.lookahead_list[0].in_look_ahead)
+
         # print(self.clock.tick,len(self.pending_orders_list),len(self.successful_orders_list),len(self.failed_orders_list))
 
 
@@ -116,10 +126,32 @@ class Environment:
         # if np.random.binomial(1,order_params['orders_arrival_probability']) == 1:
         #     self.pending_orders_list.append(Order(self.width, self.height, self.depot, order_params))
 
+        # Add new orders
         if self.clock.tick >= self.last_order_arrival + self.next_order_arrival:
-            self.pending_orders_list.append(Order(self.width, self.height, self.depot,self.clock.tick, order_params))
+            # print("new order arrived!")
+            new_order = Order(self.width, self.height, self.depot,self.clock.tick, order_params)
+            self.pending_orders_list.append(new_order)
             self.next_order_arrival = expovariate(1.0/order_params["times"]["interval_between_orders_arrivals"])
             self.last_order_arrival = self.clock.tick
+
+        # Check look ahead queue and remove orders that spent long time in the the look-ahead queue        
+        i = 1
+        while len(self.lookahead_list) > 1 and i < len(self.lookahead_list):
+            # print("********************* CHECKING",i)
+            if (self.clock.tick-self.lookahead_list[i].in_look_ahead) > order_params["timeout"]:
+                # print("********************* DELETING",self.lookahead_list[i].in_look_ahead)
+                self.failed_orders_list.append(self.lookahead_list[i])
+                del self.lookahead_list[i]
+                continue
+            i+=1
+
+        # Transfer packages from pending to look-ahead queue:
+        while len(self.lookahead_list) < order_params["look_ahead_size"] and len(self.pending_orders_list)>0:
+            order = self.pending_orders_list.popleft()
+            order.in_look_ahead = float(self.clock.tick)
+            self.lookahead_list.append(order)
+
+
 
         # Check the queue
 
@@ -253,8 +285,21 @@ class Environment:
 
     def draw_orders_locations(self, canvas):
 
-        # Draw orders with packages still in the depot
+        # Draw orders with packages in pending queue
         for order in self.pending_orders_list:
+
+            if self.order_location_img != None:
+                canvas.create_image(order.location[0]/self.pixel_to_m, order.location[1]/self.pixel_to_m, image=self.order_location_img, anchor='center')
+            else:
+                order_circle = canvas.create_oval(order.location[0]/self.pixel_to_m - 10,
+                                             order.location[1]/self.pixel_to_m - 10,
+                                             order.location[0]/self.pixel_to_m + 10,
+                                             order.location[1]/self.pixel_to_m + 10,
+                                             fill="green",
+                                             outline="")
+
+        # Draw orders with packages in look-ahead queue
+        for order in self.lookahead_list:
 
             if self.order_location_img != None:
                 canvas.create_image(order.location[0]/self.pixel_to_m, order.location[1]/self.pixel_to_m, image=self.order_location_img, anchor='center')
