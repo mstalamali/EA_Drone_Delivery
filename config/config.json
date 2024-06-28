@@ -12,9 +12,9 @@
   "episodes_no": 10,
   "seed": 1992,
   "visualization": {
-    "activate": false,
-    "fps": 60,
-    "graphics": false
+    "activate": true,
+    "fps": 30,
+    "graphics": true
   },
   "random_walk": {
     "random_walk_factor": 0.9,
@@ -44,27 +44,23 @@
     },
     {
       "class": "DecentralisedLearningBehavior_HeuristicBids",
-      "population_size": 25,
+      "population_size": 0,
       "parameters": {
         "working_threshold": 50.0,
-        "exploration_probability": 0.0
+        "exploration_probability": 0.0,
+        "initialisation": 2
       }
     },
 
     {
       "class": "DecentralisedLearningBehavior_DistanceBids",
-      "population_size": 0,
+      "population_size": 25,
       "parameters": {
         "working_threshold": 50.0,
-        "exploration_probability": 0.0
-      }
-    },
-    {
-      "class": "DecentralisedLearningBehavior_DistanceHuberBids",
-      "population_size": 0,
-      "parameters": {
-        "working_threshold": 50.0,
-        "exploration_probability": 0.0
+        "exploration_probability": 0.0,
+        "initialisation": 4,
+        "loss_function": "modified_huber",
+        "bidding_strategy": "strong_prioritisation"
       }
     },
 
@@ -73,7 +69,9 @@
       "population_size": 0,
       "parameters": {
         "working_threshold": 50.0,
-        "exploration_probability": 0.0
+        "exploration_probability": 0.0,
+        "initialisation": 2,
+        "bidding_strategy": "weak_prioritisation"
       }
     }
   ],
@@ -82,7 +80,7 @@
     "times":{
       "orders_per_episode": 10,
       "orders_arrival_probability": 0.01,
-      "interval_between_orders_arrivals": 100
+      "interval_between_orders_arrivals": 300
     },
 
     "distances":{

@@ -45,6 +45,7 @@ class ViewController:
         self.last_fps_check_time = time.time()
         self.start_animation()
 
+    
     def start_animation(self):
         while not self.animation_ended:
             # Draw environment

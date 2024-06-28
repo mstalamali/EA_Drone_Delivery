@@ -47,7 +47,8 @@
       "population_size": S_DECENTRALISED_LEARNING_HEURISTIC,
       "parameters": {
         "working_threshold": WORKING_THRESH,
-        "exploration_probability": EXPLORATION_PROBABILITY
+        "exploration_probability": EXPLORATION_PROBABILITY,
+        "initialisation": INIT_PTS
       }
     },
     {
@@ -55,15 +56,10 @@
       "population_size": S_DECENTRALISED_LEARNING_DISTANCE,
       "parameters": {
         "working_threshold": WORKING_THRESH,
-        "exploration_probability": EXPLORATION_PROBABILITY
-      }
-    },
-    {
-      "class": "DecentralisedLearningBehavior_DistanceHuberBids",
-      "population_size": S_DECENTRALISED_LEARNING_DISTANCE_HUBER,
-      "parameters": {
-        "working_threshold": WORKING_THRESH,
-        "exploration_probability": EXPLORATION_PROBABILITY
+        "exploration_probability": EXPLORATION_PROBABILITY,
+        "initialisation": INIT_PTS,
+        "loss_function": LOSS_FUNCTION,
+        "bidding_strategy": BIDDING_STRATEGY
       }
     },
      {
@@ -71,7 +67,9 @@
     "population_size": S_DECENTRALISED_LEARNING_PROBABILITY,
     "parameters": {
       "working_threshold": WORKING_THRESH,
-      "exploration_probability": EXPLORATION_PROBABILITY
+      "exploration_probability": EXPLORATION_PROBABILITY,
+        "initialisation": INIT_PTS,
+        "bidding_strategy": BIDDING_STRATEGY
     }
     }
   ],

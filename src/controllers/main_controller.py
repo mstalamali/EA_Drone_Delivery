@@ -66,6 +66,7 @@ class MainController:
                                        evaluation_type=self.config.value_of("evaluation_type"),
                                        order_params=config.value_of("orders"),
                                        clock=self.clock,
+                                       simulation_steps =self.config.value_of("simulation_steps"),
                                        agent_params=self.config.value_of("agent"),
                                        behavior_params=self.config.value_of("behaviors"))
         
@@ -79,7 +80,7 @@ class MainController:
 
         if self.filename is not None and self.filename != "":
             self.time_evolution_file = open(self.output_directory + "/time_evolution_" + self.filename,"w")
-            self.time_evolution_file.write("Time(s)\tDelivered\tPending\tFailed\n")
+            self.time_evolution_file.write("Time(s)\tDelivered\tPending\tFailed\tFailed Attempts\n")
 
 
 
@@ -137,9 +138,10 @@ class MainController:
     def record_time_evolution_data(self,end=False):
         if self.clock.tick % self.config.value_of("data_collection")['recording_interval'] == 0 or end:
             successful = len(self.environment.successful_orders_list)
-            failed = self.environment.failed_delivery_attempts
+            failed = len(self.environment.failed_orders_list)
             pending = len(self.environment.pending_orders_list)+ len(self.environment.lookahead_list) + self.environment.ongoing_attempts
-            self.time_evolution_file.write(str(self.clock.tick)+'\t'+ str(successful)+'\t'+ str(pending)+'\t'+ str(failed)+'\n')
+            failed_attempts = self.environment.failed_delivery_attempts
+            self.time_evolution_file.write(str(self.clock.tick)+'\t'+ str(successful)+'\t'+ str(pending)+'\t'+ str(failed)+'\t'+ str(failed_attempts)+'\n')
 
     def record_delivery_time_data(self):
         delivery_times_file = open(self.output_directory + "/delivery_times_" + self.filename,"w")

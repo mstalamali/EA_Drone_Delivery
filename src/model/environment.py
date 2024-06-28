@@ -14,13 +14,14 @@ except ModuleNotFoundError:
 
 class Environment:
 
-    def __init__(self, width, height, pixel_to_m, depot, evaluation_type ,order_params, clock , agent_params, behavior_params):
+    def __init__(self, width, height, pixel_to_m, depot, evaluation_type ,order_params, clock, simulation_steps, agent_params, behavior_params):
         self.population = list()
         self.width = width * pixel_to_m
         self.height = height * pixel_to_m
         self.pixel_to_m = pixel_to_m
         self.clock = clock        
         self.depot = (depot['x']*pixel_to_m, depot['y']*pixel_to_m, depot['radius']*pixel_to_m)
+        self.all_orders_list = deque() 
         self.lookahead_list = deque()  
         self.pending_orders_list = deque()
         self.successful_orders_list = deque()
@@ -37,11 +38,13 @@ class Environment:
         self.last_order_arrival = 0.0
         self.next_order_arrival = 0.0
         self.evaluation_type=evaluation_type
+        self.simulation_steps = simulation_steps
 
         if evaluation_type == "episodes": #other option is "continuous":
             self.create_episode_orders_list()
         else:
-            self.update_pending_orders_list(order_params)
+            self.draw_all_orders(order_params)
+            # self.update_pending_orders_list(order_params)
 
 
         self.create_robots(agent_params, behavior_params,order_params)
@@ -118,6 +121,16 @@ class Environment:
         #     print(self.pending_orders_list[i].fulfillment_time)
         #     print(self.pending_orders_list[i].bid_start_time)
 
+    def draw_all_orders(self, order_params):
+        time = 0
+        while time <= self.simulation_steps:
+            # print("new order arrived!")
+            new_order = Order(self.width, self.height, self.depot, time, order_params)
+            self.all_orders_list.append(new_order)
+            time += expovariate(1.0/order_params["times"]["interval_between_orders_arrivals"])
+
+        print(f'Drawing all orders = {len(self.all_orders_list)}')
+
 
     def update_pending_orders_list(self, order_params):
         # print(order_params['orders_arrival_probability'])
@@ -127,12 +140,18 @@ class Environment:
         #     self.pending_orders_list.append(Order(self.width, self.height, self.depot, order_params))
 
         # Add new orders
-        if self.clock.tick >= self.last_order_arrival + self.next_order_arrival:
-            # print("new order arrived!")
-            new_order = Order(self.width, self.height, self.depot,self.clock.tick, order_params)
-            self.pending_orders_list.append(new_order)
-            self.next_order_arrival = expovariate(1.0/order_params["times"]["interval_between_orders_arrivals"])
-            self.last_order_arrival = self.clock.tick
+        # if self.clock.tick >= self.last_order_arrival + self.next_order_arrival:
+        #     # print("new order arrived!")
+        #     new_order = Order(self.width, self.height, self.depot,self.clock.tick, order_params)
+        #     self.pending_orders_list.append(new_order)
+        #     self.next_order_arrival = expovariate(1.0/order_params["times"]["interval_between_orders_arrivals"])
+        #     self.last_order_arrival = self.clock.tick
+
+        if len(self.all_orders_list)>0:
+            if self.clock.tick >= self.all_orders_list[0].arrival_time:
+                new_order = self.all_orders_list.popleft()
+                # print(self.clock.tick,new_order.location)
+                self.pending_orders_list.append(new_order)
 
         # Check look ahead queue and remove orders that spent long time in the the look-ahead queue        
         i = 1
