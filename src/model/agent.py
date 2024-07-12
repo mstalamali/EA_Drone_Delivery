@@ -41,13 +41,16 @@ class AgentAPI:
         self.return_package = agent.return_package
         self.get_package_info = agent.get_package_info
 
+        # Logging function
+        self.log_data = agent.log_data
+
         
 
 class Agent:
     colors = {State.INSIDE_DEPOT_CHARGING: "red", State.INSIDE_DEPOT_MADE_BID: "orange", State.INSIDE_DEPOT_AVAILABLE: "green",\
                 State.ATTEMPTING_DELIVERY: "cyan", State.RETURNING_SUCCESSFUL: "magenta", State.RETURNING_FAILED: "gray"}
 
-    def __init__(self, robot_id, x, y, environment, behavior_params,order_params, clock, speed, radius, frame_weight, battery_weight,
+    def __init__(self, robot_id, x, y, environment, log_params, behavior_params,order_params, clock, speed, radius, frame_weight, battery_weight,
                  theoritical_battery_capacity, min_battery_health, max_battery_health, noise_sampling_mu, noise_sampling_sigma, noise_sd, fuel_cost,
                  communication_radius):
 
@@ -123,6 +126,15 @@ class Agent:
         self.charge_efficiency = 0.95 # (%)
 
         self.new_nav = self.behavior.navigation_table
+
+        self.data_logging = log_params[0]
+        self.log_folder = log_params[1]
+        self.log_filename_suffix = log_params[2]
+        
+        if self.data_logging:
+            self.logfile = open(f"{log_params[1]}/robot{str(self.id)}_{self.log_filename_suffix}","w")
+            self.logfile.write("Time(s)\tEvent\tState\tOutcome\tw0\tw1\tw2\tb\n")
+
         # total_weight = self.frame_weight + self.battery_weight + 5
         # print((self.theoritical_battery_capacity*0.95/(pow(self.g*total_weight,1.5)/pow(2*self.n_r*self.rho*self.zeta,0.5)/3600.0))*self._speed)
 
@@ -243,7 +255,6 @@ class Agent:
         self._bid = bid
 
 # ------> Charging related functions
-
     def update_battery_state(self):
 
         if self.charging():
@@ -256,14 +267,14 @@ class Agent:
             if self.current_battery_capacity>self.actual_battery_capacity:
                 self.current_battery_capacity=self.actual_battery_capacity
 
-            self._battery_level = self.current_battery_capacity/self.actual_battery_capacity*100.0
+            self._battery_level = np.round(self.current_battery_capacity/self.actual_battery_capacity*100.0,2)
         else:
             total_weight = self.frame_weight + self.battery_weight
             if self.carries_package():
                 total_weight += self.attempted_delivery.weight
 
             self.current_battery_capacity-= pow(self.g*total_weight,1.5)/pow(2*self.n_r*self.rho*self.zeta,0.5)/3600
-            self._battery_level = self.current_battery_capacity/self.actual_battery_capacity*100.0
+            self._battery_level = np.round(self.current_battery_capacity/self.actual_battery_capacity*100.0,2)
 
     def get_battery_level(self):
         return self._battery_level
@@ -461,3 +472,11 @@ class Agent:
         offset = 20
         text= canvas.create_text(self.pos[0]/pixel_to_m-offset, self.pos[1]/pixel_to_m-offset, fill="black",
                                 text=f"{round(self._battery_level)}%", anchor="nw")
+
+# ------> Data logging function
+    def log_data(self,time,event,state,outcome,w0,w1,w2,b):
+        if self.data_logging:
+            self.logfile.write(f"{time}\t{event}\t{state}\t{outcome}\t{w0}\t{w1}\t{w2}\t{b}\n")
+        
+
+

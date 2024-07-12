@@ -64,6 +64,7 @@ class MainController:
                                        pixel_to_m=self.config.value_of("pixel_to_m"),
                                        depot=self.config.value_of("depot"),
                                        evaluation_type=self.config.value_of("evaluation_type"),
+                                       log_params = [self.config.value_of("data_collection")['agents_data_logging'],self.config.value_of("data_collection")["output_directory"],self.config.value_of("data_collection")["filename"]],
                                        order_params=config.value_of("orders"),
                                        clock=self.clock,
                                        simulation_steps =self.config.value_of("simulation_steps"),
@@ -124,6 +125,11 @@ class MainController:
                 self.record_time_evolution_data(True)
             self.time_evolution_file.close()
 
+            for robot in self.environment.population:
+                if hasattr(robot, 'logfile'):
+                    robot.logfile.close()
+
+
     def start_simulation(self):
 
         while self.experiment_running:
@@ -160,9 +166,30 @@ class MainController:
 
     def record_robot_data(self):
         robots_log_file = open(self.output_directory + "/robots_log_" + self.filename,"w")
-        robots_log_file.write("id\tSoC\tSoH\tDelivered\tFailed\n")
+
+
+        if hasattr(self.environment.population[0].behavior, 'sgd_clf'):
+            robots_log_file.write("id\tSoC\tSoH\tDelivered\tFailed\tw0\tw1\tw2\tb\n")
+        else:
+            robots_log_file.write("id\tSoC\tSoH\tDelivered\tFailed\n")
+
+
         for robot in self.environment.population:
-            robots_log_file.write(str(robot.id)+"\t"+str(robot.get_battery_level())+"\t"+str(robot.battery_health)+"\t"+str(robot.items_delivered)+"\t"+str(robot.failed_deliveries)+"\n")
+            # print(robot.behavior.sgd_clf.coef_.shape)
+            robots_log_file.write(str(robot.id)+"\t"+\
+                                  str(robot.get_battery_level())+"\t"+\
+                                  str(robot.battery_health)+"\t"+\
+                                  str(robot.items_delivered)+"\t"+\
+                                  str(robot.failed_deliveries))
+
+            # if hasattr(robot.behavior, 'sgd_clf'):
+            #     robots_log_file.write("\t"+str(robot.behavior.sgd_clf.coef_[0,0])+"\t"+\
+            #                                str(robot.behavior.sgd_clf.coef_[0,1])+"\t"+\
+            #                                str(robot.behavior.sgd_clf.coef_[0,2])+"\t"+\
+            #                                str(robot.behavior.sgd_clf.intercept_[0]))
+
+            robots_log_file.write("\n")
+
         robots_log_file.close()
 
         

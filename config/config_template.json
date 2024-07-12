@@ -58,8 +58,10 @@
         "working_threshold": WORKING_THRESH,
         "exploration_probability": EXPLORATION_PROBABILITY,
         "initialisation": INIT_PTS,
-        "loss_function": LOSS_FUNCTION,
-        "bidding_strategy": BIDDING_STRATEGY
+        "loss_function": "LOSS_FUNCTION",
+        "bidding_strategy": "BIDDING_STRATEGY",
+        "scaler_initialisation_method": "SCALER_INIT_METHOD",
+        "model_initialisation_method": "MODEL_INIT_METHOD"
       }
     },
      {
@@ -69,7 +71,7 @@
       "working_threshold": WORKING_THRESH,
       "exploration_probability": EXPLORATION_PROBABILITY,
         "initialisation": INIT_PTS,
-        "bidding_strategy": BIDDING_STRATEGY
+        "bidding_strategy": "BIDDING_STRATEGY"
     }
     }
   ],
@@ -95,6 +97,7 @@
   "data_collection": {
     "output_directory": "DATA_FOLDER",
     "filename": "DATA_FILE_NAME",
-    "recording_interval": DATA_RECORDING_INTERVAL
+    "recording_interval": DATA_RECORDING_INTERVAL,
+    "agents_data_logging": AGENTS_DATA_LOGGING
   }
 }

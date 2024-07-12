@@ -8,11 +8,11 @@
     "radius": 50
   },
   "evaluation_type": "continuous",
-  "simulation_steps": 10001,
+  "simulation_steps": 100001,
   "episodes_no": 10,
   "seed": 1992,
   "visualization": {
-    "activate": true,
+    "activate": false,
     "fps": 30,
     "graphics": true
   },
@@ -58,9 +58,11 @@
       "parameters": {
         "working_threshold": 50.0,
         "exploration_probability": 0.0,
-        "initialisation": 4,
+        "initialisation": 5,
         "loss_function": "modified_huber",
-        "bidding_strategy": "strong_prioritisation"
+        "bidding_strategy": "WeakPrioritisation",
+        "scaler_initialisation_method": "KnownMeanVariance",
+        "model_initialisation_method": "AssumptionFitting"
       }
     },
 
@@ -98,6 +100,7 @@
   "data_collection": {
     "output_directory": "../data/test",
     "filename": "test.txt",
-    "recording_interval": 1800
+    "recording_interval": 1800,
+    "agents_data_logging": true
   }
 }

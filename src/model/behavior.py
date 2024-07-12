@@ -95,7 +95,10 @@ class NaiveBehavior(Behavior):
         elif self.state == State.ATTEMPTING_DELIVERY:            
             if sensors[Location.DELIVERY_LOCATION]:
 
-                self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level], 1.0)
+                self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level], 1)
+                
+                if hasattr(self.sgd_clf, 'coef_'):
+                    api.log_data(api.clock().tick,"learning",[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level],1,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
 
                 api.deliver_package()
                 self.state = State.RETURNING_SUCCESSFUL
@@ -103,7 +106,11 @@ class NaiveBehavior(Behavior):
             elif api.get_battery_level()  <= self.takeoff_battery_level/2.0:
                 self.state = State.RETURNING_FAILED
 
-                self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level], 0.0)
+                self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level], 0)
+                
+                if hasattr(self.sgd_clf, 'coef_'):
+                    api.log_data(api.clock().tick,"learning",[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level],0,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
+
 
                 current_difficulty = api.get_package_info().weight
                 if api.get_package_info().weight/(self.takeoff_battery_level/100.0) < self.max_weight:
@@ -150,12 +157,18 @@ class NaiveBehavior(Behavior):
                     state = [api.get_order().distance,api.get_order().weight,api.get_battery_level()]
 
                     if self.bidding_policy(state):
+                        if hasattr(self.sgd_clf, 'coef_'):
+                            api.log_data(api.clock().tick,"bidding",state,1,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
                         api.get_order().bid_start_time = api.clock().tick
 
                         self.my_bid = self.formulate_bid(order,api.get_battery_level())
                         # print("bid", self.id,self.my_bid) # <-----------------------------
                         api.make_bid(self.my_bid)
                         self.state = State.INSIDE_DEPOT_MADE_BID
+                    else:
+                        if hasattr(self.sgd_clf, 'coef_'):
+                            api.log_data(api.clock().tick,"bidding",state,0,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
+
 
         elif self.state == State.INSIDE_DEPOT_MADE_BID:
 # ------------> check other robots bids, if the robot has the highest number of failures it wins the bid, if tie with other robots, the robot with the smallest ID wins the bid
@@ -221,76 +234,10 @@ class NaiveBehavior(Behavior):
     def formulate_bid(self,order,battery_level):
         return battery_level
 
-class DecentralisedLearningBehavior_HeuristicBids(NaiveBehavior):
-    def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, initialisation = 0, min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
-        super(DecentralisedLearningBehavior_HeuristicBids, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
-        
-        self.epsilon = exploration_probability
-
-        # Initialize the scaler and the online SVM classifier
-        self.scaler = StandardScaler()
-        
-        # Create an SGD classifier with a hinge loss (SVM)
-        self.sgd_clf = SGDClassifier(loss='hinge',warm_start=True,random_state=randint(0,2**32 - 1))
-
-        self.initialisation_pts = initialisation
-
-        self.initialised = False
-
-        self.X_init = []
-        self.y_init = []
-
-        # Initialise decision model
-        if self.initialisation_pts == 0: # initialise basd on assumptions    
-            self.X_init = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
-            self.y_init = [1.0,0.0]
-            # X = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,100.0],[min_distance,min_package_weight,0.0],[max_distance,max_package_weight,0.0]]
-            # y = [1.0,1.0,0.0,0.0]
-            X_scaled = self.scaler.fit_transform(self.X_init)
-            self.sgd_clf.partial_fit(X_scaled, self.y_init, classes=np.array([0.0,1.0]))
-            self.initialised=True
-
-    def bidding_policy(self,state):
-        if self.initialised:
-            state_scaled = self.scaler.transform([state])
-            predicted_outcome = self.sgd_clf.predict(state_scaled)
-
-            # print("predict",self.id,state,predicted_outcome) # <-----------------------------
-            if predicted_outcome == 1.0:
-                return True
-            else:
-                if random() <= self.epsilon:
-                    # print(self.id,"exploring") # <-----------------------------
-                    return True
-                else:
-                    return False
-        else:
-            return True
-
-
-    def formulate_bid(self,order,battery_level):
-        if self.initialised:
-            return (0.5*order.distance/self.max_distance + 0.5*order.weight/self.max_weight)/(battery_level/100.0)
-        else:
-            return battery_level
-
-    # def learn(take_off_battery_level, package_location, package_weight, reward):
-    def learn(self,state, outcome):
-        # print("learn",self.id,state,outcome) # <-----------------------------
-        if self.initialised == True:
-            state_scaled = self.scaler.transform([state]) # CHANGE: changed transform to fit_transform
-            self.sgd_clf.partial_fit(state_scaled, [outcome])
-        else:
-            self.X_init.append(state)
-            self.y_init.append(outcome)
-            if len(self.X_init) == self.initialisation_pts:
-                X_scaled = self.scaler.fit_transform(self.X_init)
-                self.sgd_clf.partial_fit(X_scaled, self.y_init, classes=np.array([0.0,1.0]))
-                self.initialised=True
 
 
 class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
-    def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, initialisation = 0,loss_function = "hinge", bidding_strategy = 'weak_prioritisation', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
+    def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, initialisation = 0,loss_function = "hinge", bidding_strategy = 'weak_prioritisation', model_initialisation_method = "Assumption",scaler_initialisation_method='KnownMeanVariance', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
         super(DecentralisedLearningBehavior_DistanceBids, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
         
         self.epsilon = exploration_probability
@@ -307,24 +254,74 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
 
         self.bidding_strategy = bidding_strategy
 
-        self.X_init = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
-        self.y_init = [1.0,0.0]
+        self.X_assumption = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
+        self.y_assumption = [1,0]
+
+        # self.X_init = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,100.0],[min_distance,min_package_weight,0.0],[max_distance,max_package_weight,0.0]]
+        # self.y_init = [1.0,1.0,0.0,0.0]
+
+        self.X_init = []
+        self.y_init = []
+
+        self.scaler_initialisation_method = scaler_initialisation_method
+        self.model_initialisation_method = model_initialisation_method
+
+
+        # Scaled Initialisation
+        if scaler_initialisation_method == "KnownMeanVariance":
+            self.scaler.mean_= [(min_distance+max_distance)/2.0,(min_package_weight+max_package_weight)/2.0,(100.0+working_threshold)/2.0]
+            self.scaler.variance_= [(max_distance-min_distance)*(max_distance-min_distance)/12.0,(max_package_weight-min_package_weight)*(max_package_weight-min_package_weight)/12.0,(100.0-working_threshold)*(100.0-working_threshold)/12.0]
+            self.scaler.scale_ = np.sqrt(self.scaler.variance_)
+            print(self.scaler.mean_)
+            print(self.scaler.scale_)
+
+        elif scaler_initialisation_method == "AssumptionMeanVariance":
+            self.scaler.fit(self.X_assumption)
 
         # Initialise decision model
-        if self.initialisation_pts == 0: # initialise basd on assumptions
-            # X = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,100.0],[min_distance,min_package_weight,0.0],[max_distance,max_package_weight,0.0]]
-            # y = [1.0,1.0,0.0,0.0]
-            X_scaled = self.scaler.fit_transform(self.X_init)
-            self.sgd_clf.partial_fit(X_scaled, self.y_init, classes=np.array([0.0,1.0]))
+        if model_initialisation_method == "AssumptionFitting":
+            X_scaled = self.scaler.transform(self.X_assumption)
+            # self.sgd_clf.partial_fit(X_scaled, self.y_assumption, classes=np.array([0.0,1.0]))
+            self.sgd_clf.fit(X_scaled, self.y_assumption)
             self.initialised=True
 
+        elif model_initialisation_method == "CanDoEverything":
+            # initial_coef = np.zeros((1, 3)) #np.array([[1.0,10.0,20.0]])
+            # initial_intercept = np.zeros(1) #np.array([100.0])
+            # self.sgd_clf.coef_ = np.zeros((1, 3))
+            # self.sgd_clf.intercept_ = np.zeros(1)
+            self.sgd_clf.coef_ = np.array([[1.0,1.0,1.0]])
+            self.sgd_clf.intercept_ = np.array([20.0])
+            self.sgd_clf.classes_ = np.array([0, 1])
+            self.initialised=True
+            # self.sgd_clf.fit_status_ = 0
+
+            
+
+    def step(self, api):
+        # self.dr[0], self.dr[1] = 0, 0
+        self.id = api.get_id()
+        sensors = api.get_sensors()
+        self.update_state(sensors, api)
+        self.update_movement_based_on_state(api)
+        self.check_movement_with_sensors(sensors)
+        self.update_nav_table_based_on_dr()
+
+        # if api.clock().tick == 1:
+        #     print(self.id,self.sgd_clf.coef_,self.sgd_clf.intercept_)
+        #     print(self.id,self.scaler.mean_,self.scaler.scale_)
+        
     def bidding_policy(self,state):
         if self.initialised:
             state_scaled = self.scaler.transform([state])
             predicted_outcome = self.sgd_clf.predict(state_scaled)
 
-            # print("predict",self.id,state,predicted_outcome) # <-----------------------------
-            if predicted_outcome == 1.0:
+            # if self.id == 21:
+            #     print(self.sgd_clf.coef_,self.sgd_clf.intercept_)
+            #     print(self.sgd_clf.coef_[0][0],self.sgd_clf.coef_[0][1],self.sgd_clf.coef_[0][2],self.sgd_clf.intercept_[0],state,predicted_outcome[0]) # <-----------------------------
+            #     print(self.sgd_clf.decision_function(state_scaled)[0])
+            #     print()
+            if predicted_outcome == 1:
                 return True
             else:
                 if random() <= self.epsilon:
@@ -342,17 +339,20 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
 
             state_scaled = self.scaler.transform([state])
             
+            # TODO FOR HUBER LOSS TRY TO USE PROBABILITY            
             raw_distance = self.sgd_clf.decision_function(state_scaled)[0]
 
             weight_norm = np.linalg.norm(self.sgd_clf.coef_)
 
             normalised_distance = raw_distance/weight_norm
 
-            if self.bidding_strategy == "weak_prioritisation":
+            if self.bidding_strategy == "WeakPrioritisation":
                 return 1.0 - normalised_distance
-            elif self.bidding_strategy == "strong_prioritisation":
+            
+            elif self.bidding_strategy == "StrongPrioritisation":
                 return normalised_distance
-            elif self.bidding_strategy == "random":
+            
+            elif self.bidding_strategy == "Random":
                 return random()
         else:
             return battery_level
@@ -367,88 +367,95 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
         else:
             self.X_init.append(state)
             self.y_init.append(outcome)
-            if len(self.X_init) == self.initialisation_pts:
-                X_scaled = self.scaler.fit_transform(self.X_init)
-                self.sgd_clf.partial_fit(X_scaled, self.y_init, classes=np.array([0.0,1.0]))
+            if len(self.X_init) >= self.initialisation_pts and len(np.unique(self.y_init))==2:
+                if self.scaler_initialisation_method == "DataMeanVariance":
+                    self.scaler.fit(self.X_init)
+
+                X_scaled = self.scaler.transform(self.X_init)
+                # self.sgd_clf.partial_fit(X_scaled, self.y_init, classes=np.array([0,1]))
+                self.sgd_clf.fit(X_scaled, self.y_init)
+
+                print(self.id,"initialised!")
+
                 self.initialised=True
 
 
-class DecentralisedLearningBehavior_ProbabilityBids(NaiveBehavior):
-    def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, initialisation = 0, bidding_strategy = 'weak_prioritisation' , min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
-        super(DecentralisedLearningBehavior_ProbabilityBids, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
+# class DecentralisedLearningBehavior_ProbabilityBids(NaiveBehavior):
+#     def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, initialisation = 0, bidding_strategy = 'weak_prioritisation' , min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
+#         super(DecentralisedLearningBehavior_ProbabilityBids, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
         
-        self.epsilon = exploration_probability
+#         self.epsilon = exploration_probability
 
-        # Initialize the scaler and the online SVM classifier
-        self.scaler = StandardScaler()
+#         # Initialize the scaler and the online SVM classifier
+#         self.scaler = StandardScaler()
         
-        # Create an SGD classifier with a hinge loss (SVM)
-        self.sgd_clf = SGDClassifier(loss='log_loss',warm_start=True,random_state=randint(0,2**32 - 1))
+#         # Create an SGD classifier with a hinge loss (SVM)
+#         self.sgd_clf = SGDClassifier(loss='log_loss',warm_start=True,random_state=randint(0,2**32 - 1))
 
-        self.bidding_strategy = bidding_strategy
+#         self.bidding_strategy = bidding_strategy
 
-        self.initialisation_pts = initialisation
+#         self.initialisation_pts = initialisation
 
-        self.initialised = False
+#         self.initialised = False
 
-        self.X_init = []
-        self.y_init = []
+#         self.X_init = []
+#         self.y_init = []
 
-        # Initialise decision model
-        if self.initialisation_pts == 0: # initialise basd on assumptions    
-            self.X_init = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
-            self.y_init = [1.0,0.0]
-            # X = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,100.0],[min_distance,min_package_weight,0.0],[max_distance,max_package_weight,0.0]]
-            # y = [1.0,1.0,0.0,0.0]
-            X_scaled = self.scaler.fit_transform(self.X_init)
-            self.sgd_clf.partial_fit(X_scaled, self.y_init, classes=np.array([0.0,1.0]))
-            self.initialised=True
+#         # Initialise decision model
+#         if self.initialisation_pts == 0: # initialise basd on assumptions    
+#             self.X_init = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
+#             self.y_init = [1.0,0.0]
+#             # X = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,100.0],[min_distance,min_package_weight,0.0],[max_distance,max_package_weight,0.0]]
+#             # y = [1.0,1.0,0.0,0.0]
+#             X_scaled = self.scaler.fit_transform(self.X_init)
+#             self.sgd_clf.partial_fit(X_scaled, self.y_init, classes=np.array([0.0,1.0]))
+#             self.initialised=True
 
-    def bidding_policy(self,state):
+#     def bidding_policy(self,state):
 
-        if self.initialised:
-            state_scaled = self.scaler.transform([state])
-            predicted_outcome = self.sgd_clf.predict(state_scaled)
+#         if self.initialised:
+#             state_scaled = self.scaler.transform([state])
+#             predicted_outcome = self.sgd_clf.predict(state_scaled)
 
-            # print("predict",self.id,state,predicted_outcome) # <-----------------------------
-            if predicted_outcome == 1.0:
-                return True
-            else:
-                if random() <= self.epsilon:
-                    # print(self.id,"exploring") # <-----------------------------
-                    return True
-                else:
-                    return False
-        else:
-            return True
+#             # print("predict",self.id,state,predicted_outcome) # <-----------------------------
+#             if predicted_outcome == 1.0:
+#                 return True
+#             else:
+#                 if random() <= self.epsilon:
+#                     # print(self.id,"exploring") # <-----------------------------
+#                     return True
+#                 else:
+#                     return False
+#         else:
+#             return True
 
-    def formulate_bid(self,order,battery_level):
-        if self.initialised:
-            state = [order.distance,order.weight,battery_level]
-            state_scaled = self.scaler.transform([state])
-            # print(self.id,self.sgd_clf.predict_proba(state_scaled)[0][0])
-            if self.bidding_strategy == "weak_prioritisation":
-                return self.sgd_clf.predict_proba(state_scaled)[0][0]
-            elif self.bidding_strategy == "strong_prioritisation":
-                return 1.0-self.sgd_clf.predict_proba(state_scaled)[0][0]
-            elif self.bidding_strategy == "random":
-                return random()
-        else:
-            return battery_level
+#     def formulate_bid(self,order,battery_level):
+#         if self.initialised:
+#             state = [order.distance,order.weight,battery_level]
+#             state_scaled = self.scaler.transform([state])
+#             # print(self.id,self.sgd_clf.predict_proba(state_scaled)[0][0])
+#             if self.bidding_strategy == "weak_prioritisation":
+#                 return self.sgd_clf.predict_proba(state_scaled)[0][0]
+#             elif self.bidding_strategy == "strong_prioritisation":
+#                 return 1.0-self.sgd_clf.predict_proba(state_scaled)[0][0]
+#             elif self.bidding_strategy == "random":
+#                 return random()
+#         else:
+#             return battery_level
 
-    # def learn(take_off_battery_level, package_location, package_weight, reward):
-    def learn(self,state, outcome):
-        if self.initialised == True:
-            # print("learn",self.id,state,outcome) # <-----------------------------
-            state_scaled = self.scaler.transform([state]) # CHANGE: changed transform to fit_transform
-            self.sgd_clf.partial_fit(state_scaled, [outcome])
-        else:
-            self.X_init.append(state)
-            self.y_init.append(outcome)
-            if len(self.X_init) == self.initialisation_pts:
-                X_scaled = self.scaler.fit_transform(self.X_init)
-                self.sgd_clf.partial_fit(X_scaled, self.y_init, classes=np.array([0.0,1.0]))
-                self.initialised=True
+#     # def learn(take_off_battery_level, package_location, package_weight, reward):
+#     def learn(self,state, outcome):
+#         if self.initialised == True:
+#             # print("learn",self.id,state,outcome) # <-----------------------------
+#             state_scaled = self.scaler.transform([state]) # CHANGE: changed transform to fit_transform
+#             self.sgd_clf.partial_fit(state_scaled, [outcome])
+#         else:
+#             self.X_init.append(state)
+#             self.y_init.append(outcome)
+#             if len(self.X_init) == self.initialisation_pts:
+#                 X_scaled = self.scaler.fit_transform(self.X_init)
+#                 self.sgd_clf.partial_fit(X_scaled, self.y_init, classes=np.array([0.0,1.0]))
+#                 self.initialised=True
 
 # class CentralisedLearningBehavior(NaiveBehavior):
 #     def __init__(self, working_threshold = 60.0):
@@ -462,3 +469,70 @@ class DecentralisedLearningBehavior_ProbabilityBids(NaiveBehavior):
 #     def learn(take_off_battery_level, package_location, package_weight, reward):
 # #--> TO BE DESIGNED
 #         pass
+
+# class DecentralisedLearningBehavior_HeuristicBids(NaiveBehavior):
+#     def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, initialisation = 0, min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
+#         super(DecentralisedLearningBehavior_HeuristicBids, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
+        
+#         self.epsilon = exploration_probability
+
+#         # Initialize the scaler and the online SVM classifier
+#         self.scaler = StandardScaler()
+        
+#         # Create an SGD classifier with a hinge loss (SVM)
+#         self.sgd_clf = SGDClassifier(loss='hinge',warm_start=True,random_state=randint(0,2**32 - 1))
+
+#         self.initialisation_pts = initialisation
+
+#         self.initialised = False
+
+#         self.X_init = []
+#         self.y_init = []
+
+#         # Initialise decision model
+#         if self.initialisation_pts == 0: # initialise basd on assumptions    
+#             self.X_init = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
+#             self.y_init = [1.0,0.0]
+#             # X = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,100.0],[min_distance,min_package_weight,0.0],[max_distance,max_package_weight,0.0]]
+#             # y = [1.0,1.0,0.0,0.0]
+#             X_scaled = self.scaler.fit_transform(self.X_init)
+#             self.sgd_clf.partial_fit(X_scaled, self.y_init, classes=np.array([0.0,1.0]))
+#             self.initialised=True
+
+#     def bidding_policy(self,state):
+#         if self.initialised:
+#             state_scaled = self.scaler.transform([state])
+#             predicted_outcome = self.sgd_clf.predict(state_scaled)
+
+#             # print("predict",self.id,state,predicted_outcome) # <-----------------------------
+#             if predicted_outcome == 1.0:
+#                 return True
+#             else:
+#                 if random() <= self.epsilon:
+#                     # print(self.id,"exploring") # <-----------------------------
+#                     return True
+#                 else:
+#                     return False
+#         else:
+#             return True
+
+
+#     def formulate_bid(self,order,battery_level):
+#         if self.initialised:
+#             return (0.5*order.distance/self.max_distance + 0.5*order.weight/self.max_weight)/(battery_level/100.0)
+#         else:
+#             return battery_level
+
+#     # def learn(take_off_battery_level, package_location, package_weight, reward):
+#     def learn(self,state, outcome):
+#         # print("learn",self.id,state,outcome) # <-----------------------------
+#         if self.initialised == True:
+#             state_scaled = self.scaler.transform([state]) # CHANGE: changed transform to fit_transform
+#             self.sgd_clf.partial_fit(state_scaled, [outcome])
+#         else:
+#             self.X_init.append(state)
+#             self.y_init.append(outcome)
+#             if len(self.X_init) == self.initialisation_pts:
+#                 X_scaled = self.scaler.fit_transform(self.X_init)
+#                 self.sgd_clf.partial_fit(X_scaled, self.y_init, classes=np.array([0.0,1.0]))
+#                 self.initialised=True

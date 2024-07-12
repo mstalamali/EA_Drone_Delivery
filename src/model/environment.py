@@ -14,7 +14,7 @@ except ModuleNotFoundError:
 
 class Environment:
 
-    def __init__(self, width, height, pixel_to_m, depot, evaluation_type ,order_params, clock, simulation_steps, agent_params, behavior_params):
+    def __init__(self, width, height, pixel_to_m, depot, evaluation_type, log_params, order_params, clock, simulation_steps, agent_params, behavior_params):
         self.population = list()
         self.width = width * pixel_to_m
         self.height = height * pixel_to_m
@@ -47,7 +47,7 @@ class Environment:
             # self.update_pending_orders_list(order_params)
 
 
-        self.create_robots(agent_params, behavior_params,order_params)
+        self.create_robots(log_params,agent_params, behavior_params,order_params)
 
         # test variables
         self.order_test = 0
@@ -186,7 +186,7 @@ class Environment:
         #           }))
         #     self.order_test+=1
 
-    def create_robots(self, agent_params, behavior_params,order_params):
+    def create_robots(self, log_params, agent_params, behavior_params,order_params):
         robot_id = 0
         for behavior_params in behavior_params:
             for _ in range(behavior_params['population_size']):
@@ -196,6 +196,7 @@ class Environment:
                               x=self.depot[0],
                               y=self.depot[1],
                               environment=self,
+                              log_params=log_params,
                               behavior_params=behavior_params,
                               order_params=order_params,
                               clock=self.clock,
