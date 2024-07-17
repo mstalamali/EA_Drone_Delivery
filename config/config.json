@@ -58,8 +58,10 @@
       "parameters": {
         "working_threshold": 50.0,
         "exploration_probability": 0.0,
-        "initialisation": 5,
+        "initialisation": 0,
+        "data_augmentation":0,
         "loss_function": "modified_huber",
+        "scaler_type": "minmax",
         "bidding_strategy": "WeakPrioritisation",
         "scaler_initialisation_method": "KnownMeanVariance",
         "model_initialisation_method": "AssumptionFitting"

@@ -3,13 +3,13 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from math import cos, radians, sin
 from sklearn.linear_model import SGDClassifier
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import numpy as np
 
 from model.communication import CommunicationSession
 from model.navigation import Location, NavigationTable, Order, Target
 from helpers.utils import get_orientation_from_vector, norm
-from random import random,randint,choice
+from random import random,randint,uniform
 
 class State(Enum):
     INSIDE_DEPOT_AVAILABLE = 1
@@ -19,18 +19,15 @@ class State(Enum):
     RETURNING_SUCCESSFUL = 5
     RETURNING_FAILED = 6
 
-
 def behavior_factory(behavior_params,order_params):
     # if behavior_params['class'] == "DecentralisedLearningBehavior":
     behavior = eval(behavior_params['class'])(**behavior_params['parameters'],**order_params['distances'],**order_params['weights'])
     # else:
         # behavior = eval(behavior_params['class'])(**behavior_params['parameters'])
-
     return behavior
 
 
 class Behavior(ABC):
-
     def __init__(self):
         self.color = "blue"
         self.navigation_table = NavigationTable()
@@ -71,7 +68,6 @@ class NaiveBehavior(Behavior):
         self.update_movement_based_on_state(api)
         self.check_movement_with_sensors(sensors)
         self.update_nav_table_based_on_dr()
-        
 
     def check_others_bid(self, session: CommunicationSession):
         self.best_bid = session.get_best_bid()
@@ -97,8 +93,10 @@ class NaiveBehavior(Behavior):
 
                 self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level], 1)
                 
-                if hasattr(self.sgd_clf, 'coef_'):
-                    api.log_data(api.clock().tick,"learning",[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level],1,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
+                if hasattr(self, 'sgd_clf'): 
+                    if hasattr(self.sgd_clf, 'coef_'):
+                        # api.log_data(api.clock().tick,"learning",[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level],1,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
+                        api.log_data(f"{api.clock().tick}\tlearning\t{[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level]}\t{1}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
 
                 api.deliver_package()
                 self.state = State.RETURNING_SUCCESSFUL
@@ -108,8 +106,10 @@ class NaiveBehavior(Behavior):
 
                 self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level], 0)
                 
-                if hasattr(self.sgd_clf, 'coef_'):
-                    api.log_data(api.clock().tick,"learning",[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level],0,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
+                if hasattr(self, 'sgd_clf'): 
+                    if hasattr(self.sgd_clf, 'coef_'):
+                        # api.log_data(api.clock().tick,"learning",[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level],0,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
+                        api.log_data(f"{api.clock().tick}\tlearning\t{[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level]}\t{0}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
 
 
                 current_difficulty = api.get_package_info().weight
@@ -157,8 +157,11 @@ class NaiveBehavior(Behavior):
                     state = [api.get_order().distance,api.get_order().weight,api.get_battery_level()]
 
                     if self.bidding_policy(state):
-                        if hasattr(self.sgd_clf, 'coef_'):
-                            api.log_data(api.clock().tick,"bidding",state,1,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
+                        if hasattr(self, 'sgd_clf'): 
+                            if hasattr(self.sgd_clf, 'coef_'):
+                                # api.log_data(api.clock().tick,"bidding",state,1,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
+                                api.log_data(f"{api.clock().tick}\tbidding\t{state}\t{1}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
+
                         api.get_order().bid_start_time = api.clock().tick
 
                         self.my_bid = self.formulate_bid(order,api.get_battery_level())
@@ -166,8 +169,10 @@ class NaiveBehavior(Behavior):
                         api.make_bid(self.my_bid)
                         self.state = State.INSIDE_DEPOT_MADE_BID
                     else:
-                        if hasattr(self.sgd_clf, 'coef_'):
-                            api.log_data(api.clock().tick,"bidding",state,0,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
+                        if hasattr(self, 'sgd_clf'):
+                            if hasattr(self.sgd_clf, 'coef_'):
+                                # api.log_data(api.clock().tick,"bidding",state,0,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
+                                api.log_data(f"{api.clock().tick}\tbidding\t{state}\t{0}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
 
 
         elif self.state == State.INSIDE_DEPOT_MADE_BID:
@@ -237,22 +242,40 @@ class NaiveBehavior(Behavior):
 
 
 class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
-    def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, initialisation = 0,loss_function = "hinge", bidding_strategy = 'weak_prioritisation', model_initialisation_method = "Assumption",scaler_initialisation_method='KnownMeanVariance', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
+    def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, initialisation = 0, data_augmentation=0,loss_function = "hinge", scaler_type="standard", bidding_strategy = 'weak_prioritisation', model_initialisation_method = "Assumption",scaler_initialisation_method='KnownMeanVariance', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
         super(DecentralisedLearningBehavior_DistanceBids, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
         
         self.epsilon = exploration_probability
 
         # Initialize the scaler and the online SVM classifier
-        self.scaler = StandardScaler()
+        if scaler_type == "Standard":
+            self.scaler = StandardScaler()
+        elif scaler_type == "MinMax":
+            self.scaler = MinMaxScaler()
+
         
-        # Create an SGD classifier with a hinge loss (SVM)
-        self.sgd_clf = SGDClassifier(loss=loss_function,warm_start=True,random_state=randint(0,2**32 - 1))
+        # Create an SGD classifier
+        self.sgd_clf_random_state = randint(0,2**32 - 1)
+        self.sgd_clf = SGDClassifier(loss=loss_function, warm_start=True, random_state=self.sgd_clf_random_state)
 
         self.initialisation_pts = initialisation
+
+        self.data_augmentation_pts = data_augmentation
 
         self.initialised = False
 
         self.bidding_strategy = bidding_strategy
+
+        self.min_distance = min_distance
+        self.max_distance = max_distance
+        self.min_package_weight = min_package_weight
+        self.max_package_weight = max_package_weight
+        self.min_charge = working_threshold
+        self.max_charge = 100.0
+
+
+        # self.X_assumption = [[min_distance,min_package_weight,0.0],[max_distance,max_package_weight,100.0]]
+        # self.y_assumption = [0,1]
 
         self.X_assumption = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
         self.y_assumption = [1,0]
@@ -269,11 +292,18 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
 
         # Scaled Initialisation
         if scaler_initialisation_method == "KnownMeanVariance":
-            self.scaler.mean_= [(min_distance+max_distance)/2.0,(min_package_weight+max_package_weight)/2.0,(100.0+working_threshold)/2.0]
-            self.scaler.variance_= [(max_distance-min_distance)*(max_distance-min_distance)/12.0,(max_package_weight-min_package_weight)*(max_package_weight-min_package_weight)/12.0,(100.0-working_threshold)*(100.0-working_threshold)/12.0]
-            self.scaler.scale_ = np.sqrt(self.scaler.variance_)
-            print(self.scaler.mean_)
-            print(self.scaler.scale_)
+
+            if scaler_type == "Standard":
+                self.scaler.mean_= [(min_distance+max_distance)/2.0,(min_package_weight+max_package_weight)/2.0,(100.0+working_threshold)/2.0]
+                self.scaler.variance_= [(max_distance-min_distance)*(max_distance-min_distance)/12.0,(max_package_weight-min_package_weight)*(max_package_weight-min_package_weight)/12.0,(100.0-working_threshold)*(100.0-working_threshold)/12.0]
+                self.scaler.scale_ = np.sqrt(self.scaler.variance_)
+                # print(self.scaler.mean_)
+                # print(self.scaler.scale_)
+            elif scaler_type == "MinMax":
+                self.scaler.data_min_ = [min_distance,min_package_weight,working_threshold]
+                self.scaler.data_max_ = [max_distance,max_package_weight,100.0]
+                self.scaler.min_ = [-min_distance/(max_distance-min_distance), -min_package_weight/(max_package_weight-min_package_weight), -working_threshold/(100.0-working_threshold) ]
+                self.scaler.scale_ = [1.0/(max_distance-min_distance),1.0/(max_package_weight-min_package_weight),1.0/(100.0-working_threshold)]
 
         elif scaler_initialisation_method == "AssumptionMeanVariance":
             self.scaler.fit(self.X_assumption)
@@ -302,10 +332,15 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
         # self.dr[0], self.dr[1] = 0, 0
         self.id = api.get_id()
         sensors = api.get_sensors()
+        if api.clock().tick == 1 and hasattr(self, 'sgd_clf'):           
+            if hasattr(self.sgd_clf, 'coef_'):
+                api.log_data(f"{api.clock().tick}\tinitialisation\t{self.sgd_clf_random_state}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")        
         self.update_state(sensors, api)
         self.update_movement_based_on_state(api)
         self.check_movement_with_sensors(sensors)
         self.update_nav_table_based_on_dr()
+
+
 
         # if api.clock().tick == 1:
         #     print(self.id,self.sgd_clf.coef_,self.sgd_clf.intercept_)
@@ -362,8 +397,25 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
     def learn(self,state, outcome):
         if self.initialised:
             # print("learn",self.id,state,outcome) # <-----------------------------
-            state_scaled = self.scaler.transform([state]) # CHANGE: changed transform to fit_transform
-            self.sgd_clf.partial_fit(state_scaled, [outcome])
+            if self.data_augmentation_pts == 0:
+                state_scaled = self.scaler.transform([state]) # CHANGE: changed transform to fit_transform
+                self.sgd_clf.partial_fit(state_scaled, [outcome])
+            else:
+                states = [state]
+                outcomes = [outcome]*(self.data_augmentation_pts+1)
+
+                for aug_st_num in range(0,self.data_augmentation_pts):
+                    if outcome == 1:
+                        states.append([uniform(self.min_distance,state[0]),uniform(self.min_package_weight,state[1]),uniform(state[2],self.max_charge)])
+
+                    if outcome == 0:
+                        states.append([uniform(state[0],self.max_distance),uniform(state[1],self.max_package_weight),uniform(self.min_charge,state[2])])
+
+                # print(outcome,states)
+                # print()
+                state_scaled = self.scaler.transform(states) # CHANGE: changed transform to fit_transform
+                self.sgd_clf.partial_fit(state_scaled, outcomes)
+
         else:
             self.X_init.append(state)
             self.y_init.append(outcome)

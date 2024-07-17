@@ -133,7 +133,7 @@ class Agent:
         
         if self.data_logging:
             self.logfile = open(f"{log_params[1]}/robot{str(self.id)}_{self.log_filename_suffix}","w")
-            self.logfile.write("Time(s)\tEvent\tState\tOutcome\tw0\tw1\tw2\tb\n")
+            # self.logfile.write("Time(s)\tEvent\tState\tOutcome\tw0\tw1\tw2\tb\n")
 
         # total_weight = self.frame_weight + self.battery_weight + 5
         # print((self.theoritical_battery_capacity*0.95/(pow(self.g*total_weight,1.5)/pow(2*self.n_r*self.rho*self.zeta,0.5)/3600.0))*self._speed)
@@ -474,9 +474,9 @@ class Agent:
                                 text=f"{round(self._battery_level)}%", anchor="nw")
 
 # ------> Data logging function
-    def log_data(self,time,event,state,outcome,w0,w1,w2,b):
+    def log_data(self,log_text):
         if self.data_logging:
-            self.logfile.write(f"{time}\t{event}\t{state}\t{outcome}\t{w0}\t{w1}\t{w2}\t{b}\n")
+            self.logfile.write(log_text)
         
 
 

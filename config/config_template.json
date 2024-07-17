@@ -58,7 +58,9 @@
         "working_threshold": WORKING_THRESH,
         "exploration_probability": EXPLORATION_PROBABILITY,
         "initialisation": INIT_PTS,
+        "data_augmentation": DATA_AUGMENTATION_PTS,
         "loss_function": "LOSS_FUNCTION",
+        "scaler_type": "SCALER_TYPE",
         "bidding_strategy": "BIDDING_STRATEGY",
         "scaler_initialisation_method": "SCALER_INIT_METHOD",
         "model_initialisation_method": "MODEL_INIT_METHOD"

@@ -7,7 +7,6 @@
 #SBATCH -e ./logs/error.%A-%a.out 
 #SBATCH -o ./logs/output.%A-%a.out
 
-
 module load Python/3.10.8-GCCcore-12.2.0
 
 source ${HOME}/EA_Drone_Delivery/ea_drone_delivery/bin/activate
