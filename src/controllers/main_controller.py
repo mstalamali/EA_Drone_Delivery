@@ -144,7 +144,8 @@ class MainController:
     def record_time_evolution_data(self,end=False):
         if self.clock.tick % self.config.value_of("data_collection")['recording_interval'] == 0 or end:
             successful = len(self.environment.successful_orders_list)
-            failed = len(self.environment.failed_orders_list)
+            # failed = len(self.environment.failed_orders_list)
+            failed = self.environment.failed_delivery_attempts
             pending = len(self.environment.pending_orders_list)+ len(self.environment.lookahead_list) + self.environment.ongoing_attempts
             failed_attempts = self.environment.failed_delivery_attempts
             self.time_evolution_file.write(str(self.clock.tick)+'\t'+ str(successful)+'\t'+ str(pending)+'\t'+ str(failed)+'\t'+ str(failed_attempts)+'\n')

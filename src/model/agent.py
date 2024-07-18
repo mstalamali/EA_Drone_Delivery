@@ -63,7 +63,7 @@ class Agent:
         self.frame_weight = frame_weight
         self.battery_weight = battery_weight
 
-        self.lookahead_list = environment.lookahead_list
+        self.pending_orders_list = environment.pending_orders_list
         self.successful_orders_list = environment.successful_orders_list
         self.failed_orders_list = environment.failed_orders_list
 
@@ -305,8 +305,8 @@ class Agent:
 
 # ------> Delivery related functions
     def get_order(self):
-        if len(self.lookahead_list)>0:
-            return self.lookahead_list[0]
+        if len(self.pending_orders_list)>0:
+            return self.pending_orders_list[0]
         else:
             return None
 
@@ -324,12 +324,12 @@ class Agent:
     #     self.attempted_delivery.bid_start_time = float('inf')
 
     #     if self.get_order() == None:
-    #         self.lookahead_list.appendleft(self.attempted_delivery)
+    #         self.pending_orders_list.appendleft(self.attempted_delivery)
     #     else:
-    #         if self.lookahead_list[0].bid_start_time > self.clock().tick:
-    #             self.lookahead_list.appendleft(self.attempted_delivery)
+    #         if self.pending_orders_list[0].bid_start_time > self.clock().tick:
+    #             self.pending_orders_list.appendleft(self.attempted_delivery)
     #         else:
-    #             self.lookahead_list.insert(1,self.attempted_delivery)
+    #             self.pending_orders_list.insert(1,self.attempted_delivery)
 
     #     self.attempted_delivery = None
     #     self.failed_deliveries+=1
@@ -342,10 +342,10 @@ class Agent:
         self.attempted_delivery.bid_start_time = float('inf')
         
         # Put back the failed order at the end of the queue
-        # self.lookahead_list.append(self.attempted_delivery)
+        self.pending_orders_list.append(self.attempted_delivery)
 
         # Put back the failed order at the human-based delivery queue
-        self.failed_orders_list.append(self.attempted_delivery)
+        # self.failed_orders_list.append(self.attempted_delivery)
 
         self.attempted_delivery = None
         self.failed_deliveries+=1
@@ -353,7 +353,7 @@ class Agent:
         self.environment.ongoing_attempts-=1
 
     def pickup_package(self):
-        order = self.lookahead_list.popleft()
+        order = self.pending_orders_list.popleft()
         if self.environment.evaluation_type == "episodes":
             if order.arrival_time == float('inf'):
                 order.arrival_time = self.clock().tick
@@ -365,7 +365,7 @@ class Agent:
         self.attempted_delivery.attempted+=1
         self.environment.ongoing_attempts+=1
 
-        # print("GOOOOOOING!!!",len(self.lookahead_list))
+        # print("GOOOOOOING!!!",len(self.pending_orders_list))
         # print(self.attempted_delivery.location)
         # print(self.attempted_delivery.weight)
         # print(self.attempted_delivery.arrival_time)

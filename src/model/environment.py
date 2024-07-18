@@ -99,11 +99,11 @@ class Environment:
 
 
         # 4. move packages
-        if len(self.lookahead_list) > 1:
-            if self.lookahead_list[0].bid_start_time>self.clock.tick:
-                self.lookahead_list.rotate(-1)
+        if len(self.pending_orders_list) > 1:
+            if self.pending_orders_list[0].bid_start_time>self.clock.tick:
+                self.pending_orders_list.rotate(-1)
 
-        # print(len(self.lookahead_list),len(self.pending_orders_list))
+        # print(len(self.pending_orders_list),len(self.pending_orders_list))
         # if len(self.lookahead_list)>0:
         #     print("time",self.clock.tick,self.lookahead_list[0].in_look_ahead)
 
@@ -133,20 +133,8 @@ class Environment:
 
 
     def update_pending_orders_list(self, order_params):
-        # print(order_params['orders_arrival_probability'])
-        # print(order_params['max_package_weight'])
-
-        # if np.random.binomial(1,order_params['orders_arrival_probability']) == 1:
-        #     self.pending_orders_list.append(Order(self.width, self.height, self.depot, order_params))
-
-        # Add new orders
-        # if self.clock.tick >= self.last_order_arrival + self.next_order_arrival:
-        #     # print("new order arrived!")
-        #     new_order = Order(self.width, self.height, self.depot,self.clock.tick, order_params)
-        #     self.pending_orders_list.append(new_order)
-        #     self.next_order_arrival = expovariate(1.0/order_params["times"]["interval_between_orders_arrivals"])
-        #     self.last_order_arrival = self.clock.tick
-
+        
+        # Orders arrival
         if len(self.all_orders_list)>0:
             if self.clock.tick >= self.all_orders_list[0].arrival_time:
                 new_order = self.all_orders_list.popleft()
@@ -154,21 +142,21 @@ class Environment:
                 self.pending_orders_list.append(new_order)
 
         # Check look ahead queue and remove orders that spent long time in the the look-ahead queue        
-        i = 1
-        while len(self.lookahead_list) > 1 and i < len(self.lookahead_list):
-            # print("********************* CHECKING",i)
-            if (self.clock.tick-self.lookahead_list[i].in_look_ahead) > order_params["timeout"]:
-                # print("********************* DELETING",self.lookahead_list[i].in_look_ahead)
-                self.failed_orders_list.append(self.lookahead_list[i])
-                del self.lookahead_list[i]
-                continue
-            i+=1
+        # i = 1
+        # while len(self.lookahead_list) > 1 and i < len(self.lookahead_list):
+        #     # print("********************* CHECKING",i)
+        #     if (self.clock.tick-self.lookahead_list[i].in_look_ahead) > order_params["timeout"]:
+        #         # print("********************* DELETING",self.lookahead_list[i].in_look_ahead)
+        #         self.failed_orders_list.append(self.lookahead_list[i])
+        #         del self.lookahead_list[i]
+        #         continue
+        #     i+=1
 
-        # Transfer packages from pending to look-ahead queue:
-        while len(self.lookahead_list) < order_params["look_ahead_size"] and len(self.pending_orders_list)>0:
-            order = self.pending_orders_list.popleft()
-            order.in_look_ahead = float(self.clock.tick)
-            self.lookahead_list.append(order)
+        # # Transfer packages from pending to look-ahead queue:
+        # while len(self.lookahead_list) < order_params["look_ahead_size"] and len(self.pending_orders_list)>0:
+        #     order = self.pending_orders_list.popleft()
+        #     order.in_look_ahead = float(self.clock.tick)
+        #     self.lookahead_list.append(order)
 
 
 
