@@ -267,14 +267,14 @@ class Agent:
             if self.current_battery_capacity>self.actual_battery_capacity:
                 self.current_battery_capacity=self.actual_battery_capacity
 
-            self._battery_level = np.round(self.current_battery_capacity/self.actual_battery_capacity*100.0,2)
+            self._battery_level = np.round(self.current_battery_capacity/self.actual_battery_capacity*100.0,1)
         else:
             total_weight = self.frame_weight + self.battery_weight
             if self.carries_package():
                 total_weight += self.attempted_delivery.weight
 
             self.current_battery_capacity-= pow(self.g*total_weight,1.5)/pow(2*self.n_r*self.rho*self.zeta,0.5)/3600
-            self._battery_level = np.round(self.current_battery_capacity/self.actual_battery_capacity*100.0,2)
+            self._battery_level = np.round(self.current_battery_capacity/self.actual_battery_capacity*100.0,1)
 
     def get_battery_level(self):
         return self._battery_level
