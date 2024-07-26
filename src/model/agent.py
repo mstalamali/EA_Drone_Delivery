@@ -262,8 +262,10 @@ class Agent:
             # Accuracy: Highest
             # Complexity: Highest
 
-            self.current_battery_capacity += self.actual_battery_capacity*(100.0-self._battery_level) / (self.charger_power*self.charge_efficiency*3600)
+            # self.current_battery_capacity += self.actual_battery_capacity*(100.0-self._battery_level) / (self.charger_power*self.charge_efficiency*3600)
             
+            self.current_battery_capacity += (1.0-self.current_battery_capacity/self.actual_battery_capacity) * self.charger_power*self.charge_efficiency/3600.0
+
             if self.current_battery_capacity>self.actual_battery_capacity:
                 self.current_battery_capacity=self.actual_battery_capacity
 
