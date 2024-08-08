@@ -57,7 +57,6 @@ class NaiveBehavior(Behavior):
         self.max_distance = max_distance
         self.max_weight = max_package_weight
 
-# ----->To be specified from config file
         self.working_threshold = working_threshold
 
     def step(self, api):
@@ -74,10 +73,6 @@ class NaiveBehavior(Behavior):
 
     def update_state(self, sensors, api):
         
-        # print(self.state)
-        # print(self.id,self.state)
-        # print(self.id,self.state,api.get_battery_level())
-
         if self.state == State.ATTEMPTING_DELIVERY or self.state == State.RETURNING_FAILED or self.state == State.RETURNING_SUCCESSFUL:
             self.navigation_table.set_relative_position_for_location(Location.DELIVERY_LOCATION, api.get_relative_position_to_location(Location.DELIVERY_LOCATION))
         
@@ -129,7 +124,6 @@ class NaiveBehavior(Behavior):
         elif self.state == State.RETURNING_SUCCESSFUL:
 
             if sensors[Location.DEPOT_LOCATION]:
-# ------------->Forget attempted delivery
 
                 if api.get_battery_level() >= self.working_threshold:
                     self.state = State.INSIDE_DEPOT_AVAILABLE
@@ -242,7 +236,7 @@ class NaiveBehavior(Behavior):
 
 
 class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
-    def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, initialisation = 0, data_augmentation=0,loss_function = "hinge", scaler_type="standard", bidding_strategy = 'weak_prioritisation', model_initialisation_method = "Assumption",scaler_initialisation_method='KnownMeanVariance', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
+    def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, initialisation = 0, data_augmentation=0,loss_function = "hinge",learning_rate='optimal', alpha = 0.0001, eta0 =0.01 , scaler_type="standard", bidding_strategy = 'weak_prioritisation', model_initialisation_method = "Assumption",scaler_initialisation_method='KnownMeanVariance', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
         super(DecentralisedLearningBehavior_DistanceBids, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
         
         self.epsilon = exploration_probability
@@ -254,9 +248,11 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
             self.scaler = MinMaxScaler()
 
         
+        # print( loss_function,learning_rate,alpha,eta0)
+
         # Create an SGD classifier
         self.sgd_clf_random_state = randint(0,2**32 - 1)
-        self.sgd_clf = SGDClassifier(loss=loss_function, warm_start=True, random_state=self.sgd_clf_random_state)
+        self.sgd_clf = SGDClassifier(loss=loss_function,learning_rate=learning_rate,alpha=alpha,eta0=eta0, warm_start=True, random_state=self.sgd_clf_random_state)
 
         self.initialisation_pts = initialisation
 
