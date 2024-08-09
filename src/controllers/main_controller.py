@@ -168,7 +168,6 @@ class MainController:
     def record_robot_data(self):
         robots_log_file = open(self.output_directory + "/robots_log_" + self.filename,"w")
 
-
         if hasattr(self.environment.population[0].behavior, 'sgd_clf'):
             robots_log_file.write("id\tSoC\tSoH\tDelivered\tFailed\tw0\tw1\tw2\tb\n")
         else:
@@ -183,11 +182,11 @@ class MainController:
                                   str(robot.items_delivered)+"\t"+\
                                   str(robot.failed_deliveries))
 
-            # if hasattr(robot.behavior, 'sgd_clf'):
-            #     robots_log_file.write("\t"+str(robot.behavior.sgd_clf.coef_[0,0])+"\t"+\
-            #                                str(robot.behavior.sgd_clf.coef_[0,1])+"\t"+\
-            #                                str(robot.behavior.sgd_clf.coef_[0,2])+"\t"+\
-            #                                str(robot.behavior.sgd_clf.intercept_[0]))
+            if hasattr(robot.behavior, 'sgd_clf'):
+                robots_log_file.write("\t"+str(robot.behavior.sgd_clf.coef_[0,0])+"\t"+\
+                                           str(robot.behavior.sgd_clf.coef_[0,1])+"\t"+\
+                                           str(robot.behavior.sgd_clf.coef_[0,2])+"\t"+\
+                                           str(robot.behavior.sgd_clf.intercept_[0]))
 
             robots_log_file.write("\n")
 
