@@ -22,7 +22,7 @@ class CommunicationSession:
                 bidders_with_max_bid = [self._bidders[i] for i in range(len(self._bidders)) if self._bids[i] == max_value]
                 return [max_value, max(bidders_with_max_bid)]
         else:
-            return [-1,-1]
+            return [float('-inf'),float('-inf')]
 
 
     # def get_metadata(self, location):
