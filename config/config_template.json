@@ -56,6 +56,7 @@
       "population_size": S_DECENTRALISED_LEARNING_DISTANCE,
       "parameters": {
         "working_threshold": WORKING_THRESH,
+        "initial_assumption": INITIAL_ASSUMPTION,
         "exploration_probability": EXPLORATION_PROBABILITY,
         "initialisation": INIT_PTS,
         "data_augmentation": DATA_AUGMENTATION_PTS,

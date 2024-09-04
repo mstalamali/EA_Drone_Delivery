@@ -96,7 +96,7 @@ class NaiveBehavior(Behavior):
                 api.deliver_package()
                 self.state = State.RETURNING_SUCCESSFUL
 
-            elif api.get_battery_level()  <= self.takeoff_battery_level/2.0:
+            elif api.get_battery_level() <= self.takeoff_battery_level/2.0:
                 self.state = State.RETURNING_FAILED
 
                 self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level], 0)
@@ -236,7 +236,7 @@ class NaiveBehavior(Behavior):
 
 
 class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
-    def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, initialisation = 0, data_augmentation=0,loss_function = "hinge",learning_rate='optimal', alpha = 0.0001, eta0 =0.01 , scaler_type="standard", bidding_strategy = 'weak_prioritisation', model_initialisation_method = "Assumption",scaler_initialisation_method='KnownMeanVariance', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
+    def __init__(self, working_threshold = 50.0,initial_assumption = 1, exploration_probability = 0.001,initialisation = 0, data_augmentation=0,loss_function = "hinge",learning_rate='optimal', alpha = 0.0001, eta0 =0.01 , scaler_type="standard", bidding_strategy = 'weak_prioritisation', model_initialisation_method = "Assumption",scaler_initialisation_method='KnownMeanVariance', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
         super(DecentralisedLearningBehavior_DistanceBids, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
         
         self.epsilon = exploration_probability
@@ -273,8 +273,21 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
         # self.X_assumption = [[min_distance,min_package_weight,0.0],[max_distance,max_package_weight,100.0]]
         # self.y_assumption = [0,1]
 
-        self.X_assumption = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
-        self.y_assumption = [1,0]
+        #ALL PREVIOUS RESULTS
+        if initial_assumption == 1:
+            # print("using first assumption")
+            self.X_assumption = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
+            self.y_assumption = [1,0]
+
+        elif initial_assumption == 2:
+            # print("using second assumption")
+            self.X_assumption = [[min_distance,min_package_weight,100.0],[min_distance,min_package_weight,0.0]]
+            self.y_assumption = [1,0]
+
+        # NEW ASSUMPTION 2
+        # self.X_assumption = [[max_distance,max_package_weight,100.0],[min_distance,min_package_weight,0.0]]
+        # self.y_assumption = [1,0]
+
 
         # self.X_init = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,100.0],[min_distance,min_package_weight,0.0],[max_distance,max_package_weight,0.0]]
         # self.y_init = [1.0,1.0,0.0,0.0]
