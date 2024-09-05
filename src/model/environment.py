@@ -5,7 +5,7 @@ from helpers.utils import norm, distance_between
 from random import randint, random, expovariate
 import numpy as np
 from collections import deque
-
+import heapq
 
 try:
     from PIL import ImageTk
@@ -22,8 +22,8 @@ class Environment:
         self.clock = clock        
         self.depot = (depot['x']*pixel_to_m, depot['y']*pixel_to_m, depot['radius']*pixel_to_m)
         self.all_orders_list = deque() 
-        self.lookahead_list = deque()  
-        self.pending_orders_list = deque()
+        self.pending_orders_list = []
+        self.returned_orders_list = []
         self.successful_orders_list = deque()
         self.failed_orders_list = deque()      
         self.best_bot_id = self.get_best_bot_id()
@@ -49,9 +49,10 @@ class Environment:
 
         self.create_robots(log_params,agent_params, behavior_params,order_params)
 
+        self.current_order = 0
+
         # test variables
         self.order_test = 0
-
 
         # Images
         self.order_location_img = None
@@ -97,11 +98,21 @@ class Environment:
         for robot in self.population:
             robot.communicate(neighbors_table[robot.id])
 
+        # 4. move  to the next package if no body bidded for the current
+        if len(self.pending_orders_list) > 0:
 
-        # 4. move packages
-        if len(self.pending_orders_list) > 1:
-            if self.pending_orders_list[0].bid_start_time>self.clock.tick:
-                self.pending_orders_list.rotate(-1)
+            # Order has been taken or no body did bid for it
+            if self.pending_orders_list[self.current_order] == None or self.pending_orders_list[self.current_order].bid_start_time > self.clock.tick:
+                
+                self.current_order += 1
+
+                while self.current_order<len(self.pending_orders_list) and self.pending_orders_list[self.current_order] == None:
+                    self.current_order+=1
+
+                if self.current_order>=len(self.pending_orders_list):
+                    self.current_order=0
+            
+
 
         # print(len(self.pending_orders_list),len(self.pending_orders_list))
         # if len(self.lookahead_list)>0:
@@ -123,11 +134,13 @@ class Environment:
 
     def draw_all_orders(self, order_params):
         time = 0
+        order_id = 1
         while time <= self.simulation_steps:
             # print("new order arrived!")
-            new_order = Order(self.width, self.height, self.depot, time, order_params)
+            new_order = Order(self.width, self.height, self.depot, order_id, time, order_params)
             self.all_orders_list.append(new_order)
             time += expovariate(1.0/order_params["times"]["interval_between_orders_arrivals"])
+            order_id+=1
 
         print(f'Drawing all orders = {len(self.all_orders_list)}')
 
@@ -307,7 +320,7 @@ class Environment:
                                              outline="")
 
         # Draw orders with packages in look-ahead queue
-        for order in self.lookahead_list:
+        for order in self.pending_orders_list:
 
             if self.order_location_img != None:
                 canvas.create_image(order.location[0]/self.pixel_to_m, order.location[1]/self.pixel_to_m, image=self.order_location_img, anchor='center')
@@ -398,4 +411,4 @@ class Environment:
         if self.ongoing_attempts > 0:
             for robot in self.population:
                 if robot.carries_package():
-                    self.pending_orders_list.appendleft(robot.attempted_delivery)
+                    self.pending_orders_list[robot.attempted_delivery.id -1 ] = robot.attempted_delivery

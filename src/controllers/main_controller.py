@@ -146,7 +146,7 @@ class MainController:
             successful = len(self.environment.successful_orders_list)
             # failed = len(self.environment.failed_orders_list)
             failed = self.environment.failed_delivery_attempts
-            pending = len(self.environment.pending_orders_list)+ len(self.environment.lookahead_list) + self.environment.ongoing_attempts
+            pending = len(self.environment.pending_orders_list) - self.environment.pending_orders_list.count(None)
             failed_attempts = self.environment.failed_delivery_attempts
             self.time_evolution_file.write(str(self.clock.tick)+'\t'+ str(successful)+'\t'+ str(pending)+'\t'+ str(failed)+'\t'+ str(failed_attempts)+'\n')
 
@@ -161,7 +161,8 @@ class MainController:
         pending_orders_file = open(self.output_directory + "/pending_orders_" + self.filename,"w")
         pending_orders_file.write("Arrived\tDistance\tWeight\tAttempted\n")
         for order in self.environment.pending_orders_list:
-            pending_orders_file.write(str(order.arrival_time)+"\t"+str(order.distance)+"\t"+str(order.weight)+"\t"+str(order.attempted)+"\n")
+            if order != None:
+                pending_orders_file.write(str(order.arrival_time)+"\t"+str(order.distance)+"\t"+str(order.weight)+"\t"+str(order.attempted)+"\n")
         pending_orders_file.close()
 
 

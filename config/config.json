@@ -8,13 +8,13 @@
     "radius": 50
   },
   "evaluation_type": "continuous",
-  "simulation_steps": 100001,
+  "simulation_steps": 10001,
   "episodes_no": 10,
   "seed": 1992,
   "visualization": {
     "activate": false,
     "fps": 30,
-    "graphics": true
+    "graphics": false
   },
   "random_walk": {
     "random_walk_factor": 0.9,
@@ -57,11 +57,15 @@
       "population_size": 25,
       "parameters": {
         "working_threshold": 50.0,
+        "initial_assumption": 1,
         "exploration_probability": 0.0,
         "initialisation": 0,
         "data_augmentation":0,
         "loss_function": "modified_huber",
-        "scaler_type": "minmax",
+        "learning_rate": "adaptive",
+        "alpha": 0.01,
+        "eta0": 0.001,
+        "scaler_type": "Standard",
         "bidding_strategy": "WeakPrioritisation",
         "scaler_initialisation_method": "KnownMeanVariance",
         "model_initialisation_method": "AssumptionFitting"
@@ -100,9 +104,9 @@
     "timeout": 3600 
   },
   "data_collection": {
-    "output_directory": "../data/test",
+    "output_directory": "data_local/test",
     "filename": "test.txt",
     "recording_interval": 1800,
-    "agents_data_logging": true
+    "agents_data_logging": false
   }
 }

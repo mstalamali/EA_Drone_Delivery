@@ -64,6 +64,8 @@ class Agent:
         self.battery_weight = battery_weight
 
         self.pending_orders_list = environment.pending_orders_list
+        self.returned_orders_list = environment.returned_orders_list
+
         self.successful_orders_list = environment.successful_orders_list
         self.failed_orders_list = environment.failed_orders_list
 
@@ -308,14 +310,14 @@ class Agent:
 # ------> Delivery related functions
     def get_order(self):
         if len(self.pending_orders_list)>0:
-            return self.pending_orders_list[0]
+            return self.pending_orders_list[self.environment.current_order]
         else:
             return None
 
     def deliver_package(self):
         self._carries_package = False
         self.attempted_delivery.fulfillment_time = self.clock().tick
-        self.successful_orders_list.appendleft(self.attempted_delivery)
+        self.successful_orders_list.append(self.attempted_delivery)
         self.attempted_delivery = None
         self.items_delivered += 1
         self.environment.number_of_successes += 1
@@ -338,13 +340,12 @@ class Agent:
     #     self.environment.failed_delivery_attempts+=1
     #     self.environment.ongoing_attempts-=1
 
-
     def return_package(self):
         self._carries_package = False
         self.attempted_delivery.bid_start_time = float('inf')
         
         # Put back the failed order at the end of the queue
-        self.pending_orders_list.append(self.attempted_delivery)
+        self.pending_orders_list[self.attempted_delivery.id-1]=self.attempted_delivery
 
         # Put back the failed order at the human-based delivery queue
         # self.failed_orders_list.append(self.attempted_delivery)
@@ -355,7 +356,9 @@ class Agent:
         self.environment.ongoing_attempts-=1
 
     def pickup_package(self):
-        order = self.pending_orders_list.popleft()
+        order = self.pending_orders_list[self.environment.current_order]
+        self.pending_orders_list[self.environment.current_order] = None
+
         if self.environment.evaluation_type == "episodes":
             if order.arrival_time == float('inf'):
                 order.arrival_time = self.clock().tick

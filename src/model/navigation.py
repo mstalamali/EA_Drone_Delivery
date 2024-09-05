@@ -8,7 +8,7 @@ class Location(Enum):
     DEPOT_LOCATION = 2
 
 class Order:
-    def __init__(self, env_width, env_height, depot, arrival_time ,order_params):
+    def __init__(self, env_width, env_height, depot, order_id, arrival_time ,order_params):
         # Set order's location
         while True:
             self.location = [ random() * env_width , random() * env_height] 
@@ -21,6 +21,8 @@ class Order:
 
         self.radius = order_params["radius"]
 
+        self.id =  order_id
+        
         self.arrival_time = arrival_time
 
         self.fulfillment_time = float('inf')
