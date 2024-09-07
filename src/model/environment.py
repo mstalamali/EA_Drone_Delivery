@@ -103,7 +103,11 @@ class Environment:
             # Order has been taken or no body did bid for it
             if self.pending_orders_list[self.current_order] == None or self.pending_orders_list[self.current_order].bid_start_time > self.clock.tick:
                 
-                self.current_order += 1
+                if self.pending_orders_list[self.current_order] == None:
+                    self.current_order = 0
+
+                elif self.pending_orders_list[self.current_order].bid_start_time > self.clock.tick:
+                    self.current_order += 1
 
                 while self.current_order<len(self.pending_orders_list) and self.pending_orders_list[self.current_order] == None:
                     self.current_order+=1
