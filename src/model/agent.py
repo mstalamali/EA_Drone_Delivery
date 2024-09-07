@@ -64,10 +64,11 @@ class Agent:
         self.battery_weight = battery_weight
 
         self.pending_orders_list = environment.pending_orders_list
-        self.returned_orders_list = environment.returned_orders_list
 
         self.successful_orders_list = environment.successful_orders_list
         self.failed_orders_list = environment.failed_orders_list
+
+        self.charge_level_logging = environment.charge_level_logging
 
         # Set battery-related variables
         # --> Initial Values
@@ -130,9 +131,10 @@ class Agent:
         self.new_nav = self.behavior.navigation_table
 
         self.data_logging = log_params[0]
-        self.log_folder = log_params[1]
-        self.log_filename_suffix = log_params[2]
-        
+        self.charge_logging = log_params[1]
+        self.log_folder = log_params[2]
+        self.log_filename_suffix = log_params[3]
+
         if self.data_logging:
             self.logfile = open(f"{log_params[1]}/robot{str(self.id)}_{self.log_filename_suffix}","w")
             # self.logfile.write("Time(s)\tEvent\tState\tOutcome\tw0\tw1\tw2\tb\n")
@@ -356,6 +358,7 @@ class Agent:
         self.failed_deliveries+=1
         self.environment.failed_delivery_attempts+=1
         self.environment.ongoing_attempts-=1
+        self.log_charge("return")
 
     def pickup_package(self):
         order = self.pending_orders_list[self.environment.current_order]
@@ -371,6 +374,7 @@ class Agent:
         self.attempted_delivery=order
         self.attempted_delivery.attempted+=1
         self.environment.ongoing_attempts+=1
+        self.log_charge("takeoff")
 
         # print("GOOOOOOING!!!",len(self.pending_orders_list))
         # print(self.attempted_delivery.location)
@@ -484,6 +488,9 @@ class Agent:
     def log_data(self,log_text):
         if self.data_logging:
             self.logfile.write(log_text)
-        
+
+    def log_charge(self,event_type):
+        if self.charge_logging:
+            self.charge_level_logging.append([self.id, self.clock().tick, event_type, self.get_battery_level()])
 
 

@@ -62,9 +62,9 @@
         "initialisation": 0,
         "data_augmentation":0,
         "loss_function": "modified_huber",
-        "learning_rate": "adaptive",
+        "learning_rate": "optimal",
         "alpha": 0.01,
-        "eta0": 0.001,
+        "eta0": 0.01,
         "scaler_type": "Standard",
         "bidding_strategy": "WeakPrioritisation",
         "scaler_initialisation_method": "KnownMeanVariance",
@@ -107,6 +107,7 @@
     "output_directory": "data_local/test",
     "filename": "test.txt",
     "recording_interval": 1800,
-    "agents_data_logging": false
+    "agents_data_logging": false,
+    "charge_level_logging": true
   }
 }

@@ -23,7 +23,6 @@ class Environment:
         self.depot = (depot['x']*pixel_to_m, depot['y']*pixel_to_m, depot['radius']*pixel_to_m)
         self.all_orders_list = deque() 
         self.pending_orders_list = []
-        self.returned_orders_list = []
         self.successful_orders_list = deque()
         self.failed_orders_list = deque()      
         self.best_bot_id = self.get_best_bot_id()
@@ -39,6 +38,7 @@ class Environment:
         self.next_order_arrival = 0.0
         self.evaluation_type=evaluation_type
         self.simulation_steps = simulation_steps
+        self.charge_level_logging = [] 
 
         if evaluation_type == "episodes": #other option is "continuous":
             self.create_episode_orders_list()
@@ -71,7 +71,6 @@ class Environment:
     def step(self):
         
         # print(self.clock.tick)
-
 
         # 2. Update orders' list
         if self.evaluation_type == "continuous":

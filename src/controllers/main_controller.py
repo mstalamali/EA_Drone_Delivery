@@ -59,12 +59,13 @@ class MainController:
 
         self.clock = Clock(config)
 
+
         self.environment = Environment(width=self.config.value_of("width"),
                                        height=self.config.value_of("height"),
                                        pixel_to_m=self.config.value_of("pixel_to_m"),
                                        depot=self.config.value_of("depot"),
                                        evaluation_type=self.config.value_of("evaluation_type"),
-                                       log_params = [self.config.value_of("data_collection")['agents_data_logging'],self.config.value_of("data_collection")["output_directory"],self.config.value_of("data_collection")["filename"]],
+                                       log_params = [self.config.value_of("data_collection")['agents_data_logging'],self.config.value_of("data_collection")['charge_level_logging'],self.config.value_of("data_collection")["output_directory"],self.config.value_of("data_collection")["filename"]],
                                        order_params=config.value_of("orders"),
                                        clock=self.clock,
                                        simulation_steps =self.config.value_of("simulation_steps"),
@@ -119,7 +120,9 @@ class MainController:
             self.record_delivery_time_data()
             self.environment.check_orders_being_attempted()
             self.record_pending_orders_data()
-            self.record_robot_data()
+            self.record_robot_learning_data()
+            if self.config.value_of("data_collection")['charge_level_logging']:
+                self.record_robot_charge_level_data()
 
             if (self.clock.tick % self.config.value_of("data_collection")['recording_interval'] != 0):
                 self.record_time_evolution_data(True)
@@ -166,7 +169,7 @@ class MainController:
         pending_orders_file.close()
 
 
-    def record_robot_data(self):
+    def record_robot_learning_data(self):
         robots_log_file = open(self.output_directory + "/robots_log_" + self.filename,"w")
 
         if hasattr(self.environment.population[0].behavior, 'sgd_clf'):
@@ -193,6 +196,16 @@ class MainController:
 
         robots_log_file.close()
 
+    def record_robot_charge_level_data(self):
+        cherge_level_log_file = open(self.output_directory + "/charge_level_log_" + self.filename,"w")
+        cherge_level_log_file.write("robot\ttime\tcharge_level\n")
+
+        for i in range(len(self.environment.charge_level_logging)):
+            cherge_level_log_file.write(str(self.environment.charge_level_logging[i][0])+"\t"+\
+                                        str(self.environment.charge_level_logging[i][1])+"\t"+\
+                                        str(self.environment.charge_level_logging[i][2])+"\t"+\
+                                        str(self.environment.charge_level_logging[i][3])+"\n")
+        cherge_level_log_file.close()
         
 
 #   Data retrieval functions
