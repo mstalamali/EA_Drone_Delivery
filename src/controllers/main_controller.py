@@ -155,9 +155,9 @@ class MainController:
 
     def record_delivery_time_data(self):
         delivery_times_file = open(self.output_directory + "/delivery_times_" + self.filename,"w")
-        delivery_times_file.write("Arrived\tDelivered\tTook\tAttempted\n")
+        delivery_times_file.write("Arrived\tDistance\tWeight\tDelivered\tTook\tAttempted\n")
         for order in self.environment.successful_orders_list:
-            delivery_times_file.write(str(order.arrival_time)+"\t"+str(order.fulfillment_time)+"\t"+str(order.fulfillment_time-order.arrival_time)+"\t"+str(order.attempted)+"\n")
+            delivery_times_file.write(str(order.arrival_time)+"\t"+str(order.distance)+"\t"+str(order.weight)+"\t"+str(order.fulfillment_time)+"\t"+str(order.fulfillment_time-order.arrival_time)+"\t"+str(order.attempted)+"\n")
         delivery_times_file.close()
 
     def record_pending_orders_data(self):
