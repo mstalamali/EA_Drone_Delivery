@@ -10,13 +10,19 @@ class Location(Enum):
 class Order:
     def __init__(self, env_width, env_height, depot, order_id, arrival_time ,order_params):
         # Set order's location
-        while True:
-            self.location = [ random() * env_width , random() * env_height] 
-            dist_vector = self.location - np.array([depot[0], depot[1]])
-            self.distance = np.sqrt(dist_vector.dot(dist_vector))
-            if self.distance >= order_params["distances"]["min_distance"] and self.distance <= order_params["distances"]["max_distance"]:
-                break
-    
+        # while True:
+        #     self.location = [ random() * env_width , random() * env_height] 
+        #     dist_vector = self.location - np.array([depot[0], depot[1]])
+        #     self.distance = np.sqrt(dist_vector.dot(dist_vector))
+        #     if self.distance >= order_params["distances"]["min_distance"] and self.distance <= order_params["distances"]["max_distance"]:
+        #         break
+
+        self.distance = np.sqrt(uniform(order_params["distances"]["min_distance"]*order_params["distances"]["min_distance"],order_params["distances"]["max_distance"]*order_params["distances"]["max_distance"]))
+
+        theta = uniform(0, 2 * np.pi)
+
+        self.location = [ depot[0] + self.distance * np.cos(theta) , depot[1] + self.distance * np.sin(theta) ] 
+
         self.weight = uniform(order_params["weights"]["min_package_weight"], order_params["weights"]["max_package_weight"])
 
         self.radius = order_params["radius"]

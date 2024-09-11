@@ -139,8 +139,8 @@ class Environment:
         time = 0
         order_id = 1
         while time <= self.simulation_steps:
-            # print("new order arrived!")
             new_order = Order(self.width, self.height, self.depot, order_id, time, order_params)
+            # print("new order arrived!",new_order.distance, new_order.location, new_order.weight)
             self.all_orders_list.append(new_order)
             time += expovariate(1.0/order_params["times"]["interval_between_orders_arrivals"])
             order_id+=1
