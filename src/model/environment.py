@@ -97,7 +97,14 @@ class Environment:
         for robot in self.population:
             robot.communicate(neighbors_table[robot.id])
 
-        # 4. move  to the next package if no body bidded for the current
+        # 4. Check if someone is there
+        someone_is_there = False
+        for robot in self.population:
+            if robot.in_depot():
+                someone_is_there = True
+                break
+
+        # 5. move  to the next package if no body bidded for the current
         if len(self.pending_orders_list) > 0:
 
             # Order has been taken or no body did bid for it
@@ -106,7 +113,7 @@ class Environment:
                 if self.pending_orders_list[self.current_order] == None:
                     self.current_order = 0
 
-                elif self.pending_orders_list[self.current_order].bid_start_time > self.clock.tick:
+                elif self.pending_orders_list[self.current_order].bid_start_time > self.clock.tick and someone_is_there:
                     self.current_order += 1
 
                 while self.current_order<len(self.pending_orders_list) and self.pending_orders_list[self.current_order] == None:
