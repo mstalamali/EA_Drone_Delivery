@@ -69,7 +69,7 @@ class NaiveBehavior(Behavior):
         self.update_nav_table_based_on_dr()
 
     def check_others_bid(self, session: CommunicationSession):
-        self.best_bid = session.get_best_bid()
+        self.bids = session.get_bids()
 
     def update_state(self, sensors, api):
         
@@ -159,7 +159,7 @@ class NaiveBehavior(Behavior):
                         api.get_order().bid_start_time = api.clock().tick
 
                         self.my_bid = self.formulate_bid(order,api.get_battery_level())
-                        # print("bid", self.id,self.my_bid) # <-----------------------------
+                        # print("bid", self.id,self.my_bid,zorder.id) # <-----------------------------
                         api.make_bid(self.my_bid)
                         self.state = State.INSIDE_DEPOT_MADE_BID
                     else:
@@ -175,9 +175,9 @@ class NaiveBehavior(Behavior):
             
             # print(self.best_bid,self.my_bid == self.best_bid[0], self.id > self.best_bid[1])
             
-            if self.my_bid > self.best_bid[0] or (self.my_bid == self.best_bid[0] and self.id > self.best_bid[1]): # robots wins the bid
+            if api.get_order()!=None and self.evaluate_bids(api.get_order().attempted): # robots wins the bid
 
-                # print(self.id, "*********************** I won bid! *************************")
+                # print(self.id, "*********************** I won bid! *************************",api.get_order().id)
                 api.pickup_package()
 
                 self.navigation_table.replace_information_entry(Location.DELIVERY_LOCATION, Target(api.get_package_info().location))
@@ -233,6 +233,47 @@ class NaiveBehavior(Behavior):
     def formulate_bid(self,order,battery_level):
         return battery_level
 
+    def evaluate_bids(self,attempted):
+        
+        if len(self.bids[0])>0:
+
+            bids = self.bids[0]
+            bidders = self.bids[1]
+
+            max_value = np.max(bids)
+
+            if self.my_bid > max_value:
+                max_value = self.my_bid
+
+            normalised_bids = [float(x)/max_value for x in bids]
+            my_normalised_bid = float(self.my_bid)/max_value
+            
+            if self.bidding_strategy == "WeakPrioritisation":
+                A = 0
+            elif self.bidding_strategy == "StrongPrioritisation":
+                A = 1
+            elif self.bidding_strategy == "Hybrid":
+                A = 2/(1+np.exp(-attempted))-1
+
+            bids_distances = [abs(bid-A) for bid in normalised_bids]
+
+            index=np.argmin(bids_distances)
+            min_distance_value = bids_distances[index]
+
+            if bids_distances.count(min_distance_value) == 1:
+                best_bid = [min_distance_value, bidders[index]]
+            else:
+                bidders_with_min_bid = [bidders[i] for i in range(len(bidders)) if bids_distances[i] == min_distance_value]
+                best_bid = [min_distance_value, max(bidders_with_min_bid)]
+
+            my_distance_value = abs(my_normalised_bid-A)
+
+            if my_distance_value < best_bid[0] or (my_distance_value == best_bid[0] and self.id > best_bid[1]):
+                return True
+            else:
+                return False
+        else:
+            return True
 
 
 class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
@@ -390,14 +431,11 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
 
             normalised_distance = raw_distance/weight_norm
 
-            if self.bidding_strategy == "WeakPrioritisation":
-                return 1.0 - normalised_distance
-            
-            elif self.bidding_strategy == "StrongPrioritisation":
-                return normalised_distance
-            
-            elif self.bidding_strategy == "Random":
+            if self.bidding_strategy == "Random":
                 return random()
+            else:
+                return normalised_distance
+
         else:
             return battery_level
 
