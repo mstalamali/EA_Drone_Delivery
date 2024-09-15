@@ -250,7 +250,9 @@ class NaiveBehavior(Behavior):
             
             if self.bidding_strategy == "WeakPrioritisation":
                 A = 0
-            elif self.bidding_strategy == "StrongPrioritisation" or self.bidding_strategy == "Random":
+            elif self.bidding_strategy == "AveragePrioritisation":
+                A = 0.5
+            elif self.bidding_strategy == "StrongPrioritisation":
                 A = 1
             elif self.bidding_strategy == "Hybrid":
                 A = 2/(1+np.exp(-attempted))-1
