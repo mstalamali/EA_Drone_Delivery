@@ -64,7 +64,7 @@ class NaiveBehavior(Behavior):
         sensors = api.get_sensors()
         self.update_state(sensors, api)
         self.update_movement_based_on_state(api)
-        self.check_movement_with_sensors(sensors)
+        # self.check_movement_with_sensors(sensors)
         self.update_nav_table_based_on_dr()
 
     def check_others_bid(self, session: CommunicationSession):
