@@ -7,7 +7,7 @@ from collections import deque
 
 from model.behavior import State, behavior_factory
 from model.communication import CommunicationSession
-from model.navigation import Location
+from model.navigation import Location, NavigationTable
 import numpy as np
 
 from helpers.utils import get_orientation_from_vector, rotate, CommunicationState, norm
@@ -48,8 +48,8 @@ class AgentAPI:
         
 
 class Agent:
-    colors = {State.INSIDE_DEPOT_MADE_BID: "orange", State.INSIDE_DEPOT_AVAILABLE: "green",\
-                State.ATTEMPTING_DELIVERY: "cyan", State.RETURNING_SUCCESSFUL: "magenta", State.RETURNING_FAILED: "gray"}
+    colors = {State.EVALUATING: "orange", State.WAITING: "red", State.DECIDING: "green",\
+                State.ATTEMPTING: "cyan", State.RETURNING: "magenta"}
 
     def __init__(self, robot_id, x, y, environment, log_params, behavior_params,order_params, clock, speed, radius, frame_weight, battery_weight,
                  theoritical_battery_capacity, min_battery_health, max_battery_health, noise_sampling_mu, noise_sampling_sigma, noise_sd, fuel_cost,
@@ -117,7 +117,7 @@ class Agent:
 
         self._in_depot = True
 
-        self.color = self.colors[State.INSIDE_DEPOT_AVAILABLE]
+        self.color = self.colors[State.WAITING]
 
         self._bid = None
 
@@ -184,7 +184,7 @@ class Agent:
         # print("after", self.clock().tick,self.id,self.behavior.state, self.comm_state, self._bid)
 
     def communicate(self, neighbors):
-        self.previous_nav = copy.deepcopy(self.behavior.navigation_table)
+        self.previous_nav = NavigationTable(self.behavior.navigation_table.entries)
 
         if self.comm_state == CommunicationState.OPEN:
             session = CommunicationSession(self, neighbors)
@@ -206,12 +206,12 @@ class Agent:
 
     def move(self):
         wanted_movement = rotate(self.dr, self.orientation)
-        noise_angle = gauss(self.noise_mu, self.noise_sd)
-        noisy_movement = rotate(wanted_movement, noise_angle)
-        self.orientation = get_orientation_from_vector(noisy_movement)
+        # noise_angle = gauss(self.noise_mu, self.noise_sd)
+        # noisy_movement = rotate(wanted_movement, noise_angle)
+        self.orientation = get_orientation_from_vector(wanted_movement)
         prev_pos= self.pos
-        self.pos = self.clamp_to_map(self.pos + noisy_movement)
-        self.travelled_distance = norm(self.pos-prev_pos)
+        self.pos = self.clamp_to_map(self.pos + wanted_movement)
+        # self.travelled_distance = norm(self.pos-prev_pos)
 
     def clamp_to_map(self, new_position):
         if new_position[0] < self._radius:
@@ -297,13 +297,13 @@ class Agent:
         return self._in_depot
 
     def update_state(self,state):
-        if state == State.INSIDE_DEPOT_MADE_BID:
-        # if state == State.INSIDE_DEPOT_AVAILABLE or state == State.INSIDE_DEPOT_MADE_BID:
+        if state == State.EVALUATING:
+        # if state == State.WAITING or state == State.EVALUATING:
             self.comm_state = CommunicationState.OPEN
         else:
             self.comm_state = CommunicationState.CLOSED
 
-        if state == State.INSIDE_DEPOT_AVAILABLE or state == State.INSIDE_DEPOT_MADE_BID:
+        if state == State.WAITING or state == State.EVALUATING:
             self._in_depot = True
             self._charging = True
             self.pos=[self.environment.depot[0],self.environment.depot[1]]
@@ -311,7 +311,7 @@ class Agent:
             self._in_depot = False
             self._charging = False
 
-        if state == State.INSIDE_DEPOT_MADE_BID:
+        if state == State.EVALUATING:
             self._made_bid = True
         else:
             self._made_bid = False

@@ -12,11 +12,11 @@ from helpers.utils import get_orientation_from_vector, norm
 from random import random,randint,uniform
 
 class State(Enum):
-    INSIDE_DEPOT_AVAILABLE = 1
-    INSIDE_DEPOT_MADE_BID = 2
-    ATTEMPTING_DELIVERY = 3
-    RETURNING_SUCCESSFUL = 4
-    RETURNING_FAILED = 5
+    WAITING = 1
+    DECIDING = 2
+    EVALUATING = 3
+    ATTEMPTING = 4
+    RETURNING = 5
 
 def behavior_factory(behavior_params,order_params):
     # if behavior_params['class'] == "DecentralisedLearningBehavior":
@@ -46,7 +46,7 @@ class Behavior(ABC):
 class NaiveBehavior(Behavior):
     def __init__(self,working_threshold = 60.0, min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
         super().__init__()
-        self.state = State.INSIDE_DEPOT_AVAILABLE
+        self.state = State.WAITING
         self.dr = np.array([0, 0]).astype('float64')
         self.id = -1
         self.takeoff_battery_level = 100.0
@@ -55,8 +55,8 @@ class NaiveBehavior(Behavior):
         self.max_difficulty = 1.0
         self.max_distance = max_distance
         self.max_weight = max_package_weight
-
         self.working_threshold = working_threshold
+        self.delivery_outcome = 0
 
     def step(self, api):
         # self.dr[0], self.dr[1] = 0, 0
@@ -72,12 +72,12 @@ class NaiveBehavior(Behavior):
 
     def update_state(self, sensors, api):
         
-        if self.state == State.ATTEMPTING_DELIVERY or self.state == State.RETURNING_FAILED or self.state == State.RETURNING_SUCCESSFUL:
+        if self.state == State.ATTEMPTING or self.state == State.RETURNING:
             self.navigation_table.set_relative_position_for_location(Location.DELIVERY_LOCATION, api.get_relative_position_to_location(Location.DELIVERY_LOCATION))
         
         self.navigation_table.set_relative_position_for_location(Location.DEPOT_LOCATION, api.get_relative_position_to_location(Location.DEPOT_LOCATION))
 
-        if self.state == State.ATTEMPTING_DELIVERY:            
+        if self.state == State.ATTEMPTING:            
             if sensors[Location.DELIVERY_LOCATION]:
 
                 self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level], 1)
@@ -88,10 +88,12 @@ class NaiveBehavior(Behavior):
                         api.log_data(f"{api.clock().tick}\tlearning\t{[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level]}\t{1}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
 
                 api.deliver_package()
-                self.state = State.RETURNING_SUCCESSFUL
+                self.delivery_outcome = 1
+                self.state = State.RETURNING
 
             elif api.get_battery_level() <= self.takeoff_battery_level/2.0:
-                self.state = State.RETURNING_FAILED
+                self.state = State.RETURNING
+                self.delivery_outcome = 0
 
                 self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level], 0)
                 
@@ -100,28 +102,19 @@ class NaiveBehavior(Behavior):
                         # api.log_data(api.clock().tick,"learning",[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level],0,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
                         api.log_data(f"{api.clock().tick}\tlearning\t{[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level]}\t{0}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
 
-
-                current_difficulty = api.get_package_info().weight
-                if api.get_package_info().weight/(self.takeoff_battery_level/100.0) < self.max_weight:
-                    self.max_weight = api.get_package_info().weight/(self.takeoff_battery_level/100.0)
-                    # print(f'new max weight = {self.max_weight}') # <-----------------------------
-                if api.get_package_info().distance/(self.takeoff_battery_level/100.0) < self.max_distance:
-                    self.max_distance = api.get_package_info().distance/(self.takeoff_battery_level/100.0)
-                    # print(f'new max distance = {self.max_distance}') # <-----------------------------
         
-        elif self.state == State.RETURNING_FAILED:
+        elif self.state == State.RETURNING:
             
             if sensors[Location.DEPOT_LOCATION]:
-                api.return_package()
-                self.state = State.INSIDE_DEPOT_AVAILABLE
+                if self.delivery_outcome ==0:
+                    api.return_package()
+                self.state = State.WAITING
 
-        elif self.state == State.RETURNING_SUCCESSFUL:
-            if sensors[Location.DEPOT_LOCATION]:                
-                self.state = State.INSIDE_DEPOT_AVAILABLE
-
-        elif self.state == State.INSIDE_DEPOT_AVAILABLE:
+        elif self.state == State.WAITING:
             order = api.get_order()
-            
+            if order != None:
+                self.state = State.DECIDING
+                self.update_state(sensors,api)
             # print(">>>>>>>>>>>>><<<<<<<<<<<<<<<-")
             # print(order.location)
             # print(order.weight)
@@ -129,27 +122,28 @@ class NaiveBehavior(Behavior):
             # print(order.fulfillment_time)
             # print(order.bid_start_time)
 
-            if order != None:
-                # ------------> communicate bid: id, current battery level, number of fails? maybe we should consider the order arrival time
-                state = [api.get_order().distance,api.get_order().weight,api.get_battery_level()]
+        elif self.state == State.DECIDING:
+            # ------------> communicate bid: id, current battery level, number of fails? maybe we should consider the order arrival time
+            state = [api.get_order().distance,api.get_order().weight,api.get_battery_level()]
+            
+            if self.bidding_policy(state):
+                if hasattr(self, 'sgd_clf'): 
+                    if hasattr(self.sgd_clf, 'coef_'):
+                        api.log_data(f"{api.clock().tick}\tbidding\t{state}\t{1}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
 
-                if self.bidding_policy(state):
-                    if hasattr(self, 'sgd_clf'): 
-                        if hasattr(self.sgd_clf, 'coef_'):
-                            api.log_data(f"{api.clock().tick}\tbidding\t{state}\t{1}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
-
-                    self.my_bid = self.formulate_bid(order,api.get_battery_level())
-                    # print("bid", self.id,self.my_bid,order.id) # <-----------------------------
-                    api.make_bid(self.my_bid)
-                    self.state = State.INSIDE_DEPOT_MADE_BID
-                else:
-                    api.clear_next_order()
-                    if hasattr(self, 'sgd_clf'):
-                        if hasattr(self.sgd_clf, 'coef_'):
-                            api.log_data(f"{api.clock().tick}\tbidding\t{state}\t{0}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
+                self.my_bid = self.formulate_bid(api.get_order(),api.get_battery_level())
+                # print("bid", self.id,self.my_bid,order.id) # <-----------------------------
+                api.make_bid(self.my_bid)
+                self.state = State.EVALUATING
+            else:
+                self.state = State.WAITING
+                api.clear_next_order()
+                if hasattr(self, 'sgd_clf'):
+                    if hasattr(self.sgd_clf, 'coef_'):
+                        api.log_data(f"{api.clock().tick}\tbidding\t{state}\t{0}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
 
 
-        elif self.state == State.INSIDE_DEPOT_MADE_BID:
+        elif self.state == State.EVALUATING:
 # ------------> check other robots bids, if the robot has the highest number of failures it wins the bid, if tie with other robots, the robot with the smallest ID wins the bid
             # if self.number_of_failures >= max_peers_failures or (self.number_of_failures == peers_max_failures and self.id < peers_max_failures_id): # robots wins the bid
             
@@ -162,12 +156,12 @@ class NaiveBehavior(Behavior):
 
                 self.navigation_table.replace_information_entry(Location.DELIVERY_LOCATION, Target(api.get_package_info().location))
                 
-                self.state = State.ATTEMPTING_DELIVERY
+                self.state = State.ATTEMPTING
 
                 self.takeoff_battery_level = api.get_battery_level()
             
             else:
-                self.state = State.INSIDE_DEPOT_AVAILABLE
+                self.state = State.WAITING
 
             self.my_bid = None
             api.clear_next_order()
@@ -176,13 +170,13 @@ class NaiveBehavior(Behavior):
         api.update_state(self.state)
 
     def update_movement_based_on_state(self, api):
-        if self.state == State.ATTEMPTING_DELIVERY:
+        if self.state == State.ATTEMPTING:
             self.dr = self.navigation_table.get_relative_position_for_location(Location.DELIVERY_LOCATION)
-            package_norm = norm(self.navigation_table.get_relative_position_for_location(Location.DELIVERY_LOCATION))
-            if package_norm > api.speed():
-                self.dr = self.dr * api.speed() / package_norm
+            dr_norm = norm(self.navigation_table.get_relative_position_for_location(Location.DELIVERY_LOCATION))
+            if dr_norm > api.speed():
+                self.dr = self.dr * api.speed() / dr_norm
 
-        elif self.state == State.RETURNING_SUCCESSFUL or self.state == State.RETURNING_FAILED:
+        elif self.state == State.RETURNING:
             self.dr = self.navigation_table.get_relative_position_for_location(Location.DEPOT_LOCATION)
             depot_norm = norm(self.navigation_table.get_relative_position_for_location(Location.DEPOT_LOCATION))
             if depot_norm > api.speed():
@@ -315,8 +309,14 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
 
             if scaler_type == "Standard":
                 self.scaler.mean_= [(min_distance+max_distance)/2.0,(min_package_weight+max_package_weight)/2.0,(100.0+working_threshold)/2.0]
+                self.scaler_mean = self.scaler.mean_
+
                 self.scaler.variance_= [(max_distance-min_distance)*(max_distance-min_distance)/12.0,(max_package_weight-min_package_weight)*(max_package_weight-min_package_weight)/12.0,(100.0-working_threshold)*(100.0-working_threshold)/12.0]
+                
+
                 self.scaler.scale_ = np.sqrt(self.scaler.variance_)
+                self.scaler_std = self.scaler.scale_
+
                 # print(self.scaler.mean_)
                 # print(self.scaler.scale_)
             elif scaler_type == "MinMax":
@@ -357,7 +357,7 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
                 api.log_data(f"{api.clock().tick}\tinitialisation\t{self.sgd_clf_random_state}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")        
         self.update_state(sensors, api)
         self.update_movement_based_on_state(api)
-        self.check_movement_with_sensors(sensors)
+        # self.check_movement_with_sensors(sensors)
         self.update_nav_table_based_on_dr()
 
 
@@ -368,8 +368,15 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
         
     def bidding_policy(self,state):
         if self.initialised:
-            state_scaled = self.scaler.transform([state])
-            predicted_outcome = self.sgd_clf.predict(state_scaled)
+            state_scaled = self.transform(state)
+            predicted_outcome= self.predict(state_scaled)
+
+
+            # predicted_outcome = self.sgd_clf.predict([state_scaled])
+            # predicted_outcome_my_implementation = self.predict(state_scaled)
+            # if predicted_outcome!=predicted_outcome_my_implementation:
+            #     print("********", predicted_outcome, predicted_outcome_my_implementation)
+
 
             # if self.id == 21:
             #     print(self.sgd_clf.coef_,self.sgd_clf.intercept_)
@@ -392,10 +399,14 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
         if self.initialised:
             state = [order.distance,order.weight,battery_level]
 
-            state_scaled = self.scaler.transform([state])
+            state_scaled = self.transform(state)
             
             # TODO FOR HUBER LOSS TRY TO USE PROBABILITY            
-            raw_distance = self.sgd_clf.decision_function(state_scaled)[0]
+            # raw_distance = self.sgd_clf.decision_function([state_scaled])[0]
+            # raw_distance_my_implementation = self.decision_function(state_scaled)
+            # print(raw_distance,raw_distance_my_implementation)
+
+            raw_distance = self.decision_function(state_scaled)
 
             weight_norm = np.linalg.norm(self.sgd_clf.coef_)
 
@@ -415,8 +426,9 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
         if self.initialised:
             # print("learn",self.id,state,outcome) # <-----------------------------
             if self.data_augmentation_pts == 0:
-                state_scaled = self.scaler.transform([state]) # CHANGE: changed transform to fit_transform
-                self.sgd_clf.partial_fit(state_scaled, [outcome])
+                # state_scaled = self.scaler.transform([state]) # CHANGE: changed transform to fit_transform
+                state_scaled = self.transform(state)
+                self.sgd_clf.partial_fit([state_scaled], [outcome])
             else:
                 states = [state]
                 outcomes = [outcome]*(self.data_augmentation_pts+1)
@@ -491,6 +503,18 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
         else:
             return True
 
+
+    def transform(self,state):
+        return [(state[0]-self.scaler_mean[0])/self.scaler_std[0], (state[1]-self.scaler_mean[1])/self.scaler_std[1], (state[2]-self.scaler_mean[2])/self.scaler_std[2]]
+
+    def decision_function(self,state):
+        return self.sgd_clf.coef_[0,0] * state[0] + self.sgd_clf.coef_[0,1] * state[1] +  self.sgd_clf.coef_[0,2] * state[2] + self.sgd_clf.intercept_[0]      
+
+    def predict(self,state):
+        if self.decision_function(state)>=0:
+            return 1
+        else:
+            return 0
 
 # class DecentralisedLearningBehavior_ProbabilityBids(NaiveBehavior):
 #     def __init__(self, working_threshold = 50.0,exploration_probability = 0.001, initialisation = 0, bidding_strategy = 'weak_prioritisation' , min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):

@@ -76,8 +76,8 @@ class Target:
 
 
 class NavigationTable:
-    def __init__(self):
-        self.entries = dict()
+    def __init__(self,entries=dict()):
+        self.entries = entries
         for location in Location:
             self.entries[location] = Target(location)
 

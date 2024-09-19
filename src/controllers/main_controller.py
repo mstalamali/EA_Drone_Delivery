@@ -80,6 +80,9 @@ class MainController:
 
         self.experiment_running = True
 
+        self.time_evolution_recording_interval = self.config.value_of("data_collection")['recording_interval']
+        self.robot_learning_recording_interval = self.config.value_of("data_collection")['learning_evaluation_interval']
+        
         if self.filename is not None and self.filename != "":
             self.time_evolution_file = open(self.output_directory + "/time_evolution_" + self.filename,"w")
             self.time_evolution_file.write("Time(s)\tDelivered\tPending\tFailed\tFailed Attempts\n")
@@ -125,10 +128,10 @@ class MainController:
             if self.config.value_of("data_collection")['charge_level_logging']:
                 self.record_robot_charge_level_data()
 
-            if (self.clock.tick % self.config.value_of("data_collection")['recording_interval'] != 0):
+            if (self.clock.tick % self.time_evolution_recording_interval != 0):
                 self.record_time_evolution_data(True)
 
-            if (self.clock.tick % self.config.value_of("data_collection")['learning_evaluation_interval'] != 0):
+            if (self.clock.tick % self.robot_learning_recording_interval != 0):
                 self.record_robot_learning_data(True)
 
             self.time_evolution_file.close()
@@ -150,7 +153,7 @@ class MainController:
         return self.environment.get_robot_at(x, y)
 
     def record_time_evolution_data(self,end=False):
-        if self.clock.tick % self.config.value_of("data_collection")['recording_interval'] == 0 or end:
+        if self.clock.tick % self.time_evolution_recording_interval == 0 or end:
             successful = len(self.environment.successful_orders_list)
             # failed = len(self.environment.failed_orders_list)
             failed = self.environment.failed_delivery_attempts
@@ -176,7 +179,7 @@ class MainController:
 
     def record_robot_learning_data(self,end=False):
 
-        if self.clock.tick % self.config.value_of("data_collection")['learning_evaluation_interval'] == 0 or end:
+        if self.clock.tick % self.robot_learning_recording_interval == 0 or end:
 
             robots_log_file = open(self.output_directory + "/robots_log_" + str(self.clock.tick)+ "_" + self.filename ,"w")
 

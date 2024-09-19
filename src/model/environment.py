@@ -251,20 +251,7 @@ class Environment:
         orientation = robot.orientation
         speed = robot.speed()
         sensors = {Location.DELIVERY_LOCATION: self.senses(robot, Location.DELIVERY_LOCATION),
-                   Location.DEPOT_LOCATION: self.senses(robot, Location.DEPOT_LOCATION),
-                   "FRONT": any(self.check_border_collision(robot, robot.pos[0] + speed * cos(radians(orientation)),
-                                                            robot.pos[1] + speed * sin(radians(orientation)))),
-                   "RIGHT": any(
-                       self.check_border_collision(robot, robot.pos[0] + speed * cos(radians((orientation - 90) % 360)),
-                                                   robot.pos[1] + speed * sin(radians((orientation - 90) % 360)))),
-                   "BACK": any(self.check_border_collision(robot, robot.pos[0] + speed * cos(
-                       radians((orientation + 180) % 360)),
-                                                           robot.pos[1] + speed * sin(
-                                                               radians((orientation + 180) % 360)))),
-                   "LEFT": any(
-                       self.check_border_collision(robot, robot.pos[0] + speed * cos(radians((orientation + 90) % 360)),
-                                                   robot.pos[1] + speed * sin(radians((orientation + 90) % 360)))),
-                   }
+                   Location.DEPOT_LOCATION: self.senses(robot, Location.DEPOT_LOCATION) }
         return sensors
 
     def check_border_collision(self, robot, new_x, new_y):
