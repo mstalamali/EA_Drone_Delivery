@@ -50,6 +50,8 @@ class Environment:
         self.create_robots(log_params,agent_params, behavior_params,order_params)
 
         self.current_order = 0
+        self.current_order_advertised = False
+        self.last_order_advertisment_time = -self.order_params["times"]["order_processing_interval"]
 
         # test variables
         self.order_test = 0
@@ -97,39 +99,68 @@ class Environment:
         for robot in self.population:
             robot.communicate(neighbors_table[robot.id])
 
-        # 4. Check if someone is there
-        someone_is_there = False
-        for robot in self.population:
-            if robot.in_depot():
-                someone_is_there = True
-                break
 
-        # 5. move  to the next package if no body bidded for the current
-        if len(self.pending_orders_list) > 0:
+        # 4. move  to the next package if no body bidded for the current
+        if len(self.pending_orders_list) > 0 or self.current_order_advertised:
 
-            # Order has been taken or no body did bid for it
-            if self.pending_orders_list[self.current_order] == None or self.pending_orders_list[self.current_order].bid_start_time > self.clock.tick:
+            if not self.current_order_advertised:
+
+                if (self.clock.tick - self.last_order_advertisment_time) >= self.order_params["times"]["order_processing_interval"]:
+
+                    if self.pending_orders_list[self.current_order] != None or self.pending_orders_list.count(None)<len(self.pending_orders_list):
+                        
+                        while self.pending_orders_list[self.current_order] == None:
+                                self.current_order += 1
+
+                        self.last_order_advertisment_time = self.clock.tick
+                        self.advertise_next_order(self.pending_orders_list[self.current_order])
+                        # print(self.clock.tick,"advertising order:",self.pending_orders_list[self.current_order].id)
+                        self.current_order_advertised = True
                 
-                if self.pending_orders_list[self.current_order] == None:
-                    self.current_order = 0
+            else:
 
-                elif self.pending_orders_list[self.current_order].bid_start_time > self.clock.tick and someone_is_there:
+                if self.pending_orders_list[self.current_order] == None:
+                    # print(self.clock.tick,"previous advertised order taken!")
+
+                    self.current_order = 0
+                    if self.pending_orders_list.count(None)<len(self.pending_orders_list):
+                        while self.pending_orders_list[self.current_order] == None:
+                            self.current_order += 1
+
+                    self.current_order_advertised = False
+                elif self.no_bids():
+                    # print(self.clock.tick,"no bids",self.no_bids())
                     self.current_order += 1
 
-                while self.current_order<len(self.pending_orders_list) and self.pending_orders_list[self.current_order] == None:
-                    self.current_order+=1
+                    while self.current_order<len(self.pending_orders_list) and self.pending_orders_list[self.current_order] == None:
+                        self.current_order+=1
 
-                if self.current_order>=len(self.pending_orders_list):
-                    self.current_order=0
-            
+                    if self.current_order>=len(self.pending_orders_list):
+                        self.current_order=0
+                        if self.pending_orders_list.count(None)<len(self.pending_orders_list):
+                            while self.pending_orders_list[self.current_order] == None:
+                                self.current_order += 1
 
+                    self.current_order_advertised = False
+                # else:
+                    # print(self.clock.tick,"bids", not self.no_bids())
 
-        # print(len(self.pending_orders_list),len(self.pending_orders_list))
-        # if len(self.lookahead_list)>0:
-        #     print("time",self.clock.tick,self.lookahead_list[0].in_look_ahead)
+    def advertise_next_order(self,order):
+        for robot in self.population:
+            if robot.in_depot():
+                robot.receive_next_order(order)
 
-        # print(self.clock.tick,len(self.pending_orders_list),len(self.successful_orders_list),len(self.failed_orders_list))
+    def any_UAV_in(self):
+        for robot in self.population:
+            if robot.in_depot():
+                return True
+        return False
 
+    def no_bids(self):
+        for robot in self.population:
+            if robot.made_bid():
+                return False
+        return True
 
     def create_episode_orders_list(self):
         while len(self.pending_orders_list)<self.order_params["times"]['orders_per_episode']:
@@ -161,7 +192,7 @@ class Environment:
         if len(self.all_orders_list)>0:
             if self.clock.tick >= self.all_orders_list[0].arrival_time:
                 new_order = self.all_orders_list.popleft()
-                # print(self.clock.tick,new_order.location)
+                # print(self.clock.tick,"new order",new_order.id)
                 self.pending_orders_list.append(new_order)
 
         # Check look ahead queue and remove orders that spent long time in the the look-ahead queue        
@@ -319,28 +350,16 @@ class Environment:
         # Draw orders with packages in pending queue
         for order in self.pending_orders_list:
 
-            if self.order_location_img != None:
-                canvas.create_image(order.location[0]/self.pixel_to_m, order.location[1]/self.pixel_to_m, image=self.order_location_img, anchor='center')
-            else:
-                order_circle = canvas.create_oval(order.location[0]/self.pixel_to_m - 10,
-                                             order.location[1]/self.pixel_to_m - 10,
-                                             order.location[0]/self.pixel_to_m + 10,
-                                             order.location[1]/self.pixel_to_m + 10,
-                                             fill="green",
-                                             outline="")
-
-        # Draw orders with packages in look-ahead queue
-        for order in self.pending_orders_list:
-
-            if self.order_location_img != None:
-                canvas.create_image(order.location[0]/self.pixel_to_m, order.location[1]/self.pixel_to_m, image=self.order_location_img, anchor='center')
-            else:
-                order_circle = canvas.create_oval(order.location[0]/self.pixel_to_m - 10,
-                                             order.location[1]/self.pixel_to_m - 10,
-                                             order.location[0]/self.pixel_to_m + 10,
-                                             order.location[1]/self.pixel_to_m + 10,
-                                             fill="green",
-                                             outline="")
+            if order!=None:
+                if self.order_location_img != None:
+                    canvas.create_image(order.location[0]/self.pixel_to_m, order.location[1]/self.pixel_to_m, image=self.order_location_img, anchor='center')
+                else:
+                    order_circle = canvas.create_oval(order.location[0]/self.pixel_to_m - 10,
+                                                 order.location[1]/self.pixel_to_m - 10,
+                                                 order.location[0]/self.pixel_to_m + 10,
+                                                 order.location[1]/self.pixel_to_m + 10,
+                                                 fill="green",
+                                                 outline="")
 
         for robot in self.population:
             if robot.carries_package():
@@ -353,9 +372,6 @@ class Environment:
                                                  robot.attempted_delivery.location[1]/self.pixel_to_m + 10,
                                                  fill="green",
                                                  outline="")
-                    
-        # for bot_id, pos in self.foraging_spawns[Location.DEPOT].items():
-        #     canvas.create_image(pos[0] - 8, pos[1] - 8, image=self.img, anchor='nw')
 
     def draw_best_bot(self, canvas):
         circle = canvas.create_oval(self.population[self.best_bot_id].pos[0] - 4,

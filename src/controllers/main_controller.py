@@ -91,6 +91,7 @@ class MainController:
         self.environment.step()
         if self.filename is not None or self.filename != "":
             self.record_time_evolution_data()
+            self.record_robot_learning_data()
 
         # else:
         #     print(len(self.environment.successful_orders_list),self.environment.failed_delivery_attempt)
@@ -120,12 +121,16 @@ class MainController:
             self.record_delivery_time_data()
             self.environment.check_orders_being_attempted()
             self.record_pending_orders_data()
-            self.record_robot_learning_data()
+            # self.record_robot_learning_data()
             if self.config.value_of("data_collection")['charge_level_logging']:
                 self.record_robot_charge_level_data()
 
             if (self.clock.tick % self.config.value_of("data_collection")['recording_interval'] != 0):
                 self.record_time_evolution_data(True)
+
+            if (self.clock.tick % self.config.value_of("data_collection")['learning_evaluation_interval'] != 0):
+                self.record_robot_learning_data(True)
+
             self.time_evolution_file.close()
 
             for robot in self.environment.population:
@@ -169,32 +174,35 @@ class MainController:
         pending_orders_file.close()
 
 
-    def record_robot_learning_data(self):
-        robots_log_file = open(self.output_directory + "/robots_log_" + self.filename,"w")
+    def record_robot_learning_data(self,end=False):
 
-        if hasattr(self.environment.population[0].behavior, 'sgd_clf'):
-            robots_log_file.write("id\tSoC\tSoH\tDelivered\tFailed\tw0\tw1\tw2\tb\n")
-        else:
-            robots_log_file.write("id\tSoC\tSoH\tDelivered\tFailed\n")
+        if self.clock.tick % self.config.value_of("data_collection")['learning_evaluation_interval'] == 0 or end:
+
+            robots_log_file = open(self.output_directory + "/robots_log_" + str(self.clock.tick)+ "_" + self.filename ,"w")
+
+            if hasattr(self.environment.population[0].behavior, 'sgd_clf'):
+                robots_log_file.write("id\tSoC\tSoH\tDelivered\tFailed\tw0\tw1\tw2\tb\n")
+            else:
+                robots_log_file.write("id\tSoC\tSoH\tDelivered\tFailed\n")
 
 
-        for robot in self.environment.population:
-            # print(robot.behavior.sgd_clf.coef_.shape)
-            robots_log_file.write(str(robot.id)+"\t"+\
-                                  str(robot.get_battery_level())+"\t"+\
-                                  str(robot.battery_health)+"\t"+\
-                                  str(robot.items_delivered)+"\t"+\
-                                  str(robot.failed_deliveries))
+            for robot in self.environment.population:
+                # print(robot.behavior.sgd_clf.coef_.shape)
+                robots_log_file.write(str(robot.id)+"\t"+\
+                                      str(robot.get_battery_level())+"\t"+\
+                                      str(robot.battery_health)+"\t"+\
+                                      str(robot.items_delivered)+"\t"+\
+                                      str(robot.failed_deliveries))
 
-            if hasattr(robot.behavior, 'sgd_clf'):
-                robots_log_file.write("\t"+str(robot.behavior.sgd_clf.coef_[0,0])+"\t"+\
-                                           str(robot.behavior.sgd_clf.coef_[0,1])+"\t"+\
-                                           str(robot.behavior.sgd_clf.coef_[0,2])+"\t"+\
-                                           str(robot.behavior.sgd_clf.intercept_[0]))
+                if hasattr(robot.behavior, 'sgd_clf'):
+                    robots_log_file.write("\t"+str(robot.behavior.sgd_clf.coef_[0,0])+"\t"+\
+                                               str(robot.behavior.sgd_clf.coef_[0,1])+"\t"+\
+                                               str(robot.behavior.sgd_clf.coef_[0,2])+"\t"+\
+                                               str(robot.behavior.sgd_clf.intercept_[0]))
 
-            robots_log_file.write("\n")
+                robots_log_file.write("\n")
 
-        robots_log_file.close()
+            robots_log_file.close()
 
     def record_robot_charge_level_data(self):
         cherge_level_log_file = open(self.output_directory + "/charge_level_log_" + self.filename,"w")

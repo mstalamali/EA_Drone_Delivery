@@ -8,7 +8,7 @@
     "radius": 50
   },
   "evaluation_type": "continuous",
-  "simulation_steps": 10001,
+  "simulation_steps": 86400,
   "episodes_no": 10,
   "seed": 1992,
   "visualization": {
@@ -42,15 +42,6 @@
         "working_threshold": 50.0
       }
     },
-    {
-      "class": "DecentralisedLearningBehavior_HeuristicBids",
-      "population_size": 0,
-      "parameters": {
-        "working_threshold": 50.0,
-        "exploration_probability": 0.0,
-        "initialisation": 2
-      }
-    },
 
     {
       "class": "DecentralisedLearningBehavior_DistanceBids",
@@ -66,20 +57,9 @@
         "alpha": 0.01,
         "eta0": 0.01,
         "scaler_type": "Standard",
-        "bidding_strategy": "WeakPrioritisation",
+        "bidding_strategy": "Weakest",
         "scaler_initialisation_method": "KnownMeanVariance",
         "model_initialisation_method": "AssumptionFitting"
-      }
-    },
-
-      {
-      "class": "DecentralisedLearningBehavior_ProbabilityBids",
-      "population_size": 0,
-      "parameters": {
-        "working_threshold": 50.0,
-        "exploration_probability": 0.0,
-        "initialisation": 2,
-        "bidding_strategy": "weak_prioritisation"
       }
     }
   ],
@@ -88,7 +68,8 @@
     "times":{
       "orders_per_episode": 10,
       "orders_arrival_probability": 0.01,
-      "interval_between_orders_arrivals": 300
+      "interval_between_orders_arrivals": 900,
+      "order_processing_interval": 2
     },
 
     "distances":{
@@ -104,9 +85,10 @@
     "timeout": 3600 
   },
   "data_collection": {
-    "output_directory": "data_local/test",
+    "output_directory": "../data_local/test",
     "filename": "test.txt",
     "recording_interval": 1800,
+    "learning_evaluation_interval":3600,
     "agents_data_logging": false,
     "charge_level_logging": true
   }

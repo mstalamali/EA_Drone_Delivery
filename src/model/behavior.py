@@ -13,11 +13,10 @@ from random import random,randint,uniform
 
 class State(Enum):
     INSIDE_DEPOT_AVAILABLE = 1
-    INSIDE_DEPOT_CHARGING = 2
-    INSIDE_DEPOT_MADE_BID = 3
-    ATTEMPTING_DELIVERY = 4
-    RETURNING_SUCCESSFUL = 5
-    RETURNING_FAILED = 6
+    INSIDE_DEPOT_MADE_BID = 2
+    ATTEMPTING_DELIVERY = 3
+    RETURNING_SUCCESSFUL = 4
+    RETURNING_FAILED = 5
 
 def behavior_factory(behavior_params,order_params):
     # if behavior_params['class'] == "DecentralisedLearningBehavior":
@@ -78,12 +77,7 @@ class NaiveBehavior(Behavior):
         
         self.navigation_table.set_relative_position_for_location(Location.DEPOT_LOCATION, api.get_relative_position_to_location(Location.DEPOT_LOCATION))
 
-        if self.state == State.INSIDE_DEPOT_CHARGING:
-
-            if api.get_battery_level() >= self.working_threshold:
-                self.state = State.INSIDE_DEPOT_AVAILABLE
-
-        elif self.state == State.ATTEMPTING_DELIVERY:            
+        if self.state == State.ATTEMPTING_DELIVERY:            
             if sensors[Location.DELIVERY_LOCATION]:
 
                 self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level], 1)
@@ -119,54 +113,40 @@ class NaiveBehavior(Behavior):
             
             if sensors[Location.DEPOT_LOCATION]:
                 api.return_package()
-                self.state = State.INSIDE_DEPOT_CHARGING
+                self.state = State.INSIDE_DEPOT_AVAILABLE
 
         elif self.state == State.RETURNING_SUCCESSFUL:
-
-            if sensors[Location.DEPOT_LOCATION]:
-
-                if api.get_battery_level() >= self.working_threshold:
-                    self.state = State.INSIDE_DEPOT_AVAILABLE
-                else:
-                    self.state = State.INSIDE_DEPOT_CHARGING
+            if sensors[Location.DEPOT_LOCATION]:                
+                self.state = State.INSIDE_DEPOT_AVAILABLE
 
         elif self.state == State.INSIDE_DEPOT_AVAILABLE:
+            order = api.get_order()
             
-            if api.get_battery_level() < self.working_threshold:
-                self.state = State.INSIDE_DEPOT_CHARGING
-            
-            else:
-                order = api.get_order()
-                
-                # print(">>>>>>>>>>>>><<<<<<<<<<<<<<<-")
-                # print(order.location)
-                # print(order.weight)
-                # print(order.arrival_time)
-                # print(order.fulfillment_time)
-                # print(order.bid_start_time)
+            # print(">>>>>>>>>>>>><<<<<<<<<<<<<<<-")
+            # print(order.location)
+            # print(order.weight)
+            # print(order.arrival_time)
+            # print(order.fulfillment_time)
+            # print(order.bid_start_time)
 
-                if order != None and order.bid_start_time>=api.clock().tick:
+            if order != None:
+                # ------------> communicate bid: id, current battery level, number of fails? maybe we should consider the order arrival time
+                state = [api.get_order().distance,api.get_order().weight,api.get_battery_level()]
 
-                    # ------------> communicate bid: id, current battery level, number of fails? maybe we should consider the order arrival time
-                    state = [api.get_order().distance,api.get_order().weight,api.get_battery_level()]
+                if self.bidding_policy(state):
+                    if hasattr(self, 'sgd_clf'): 
+                        if hasattr(self.sgd_clf, 'coef_'):
+                            api.log_data(f"{api.clock().tick}\tbidding\t{state}\t{1}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
 
-                    if self.bidding_policy(state):
-                        if hasattr(self, 'sgd_clf'): 
-                            if hasattr(self.sgd_clf, 'coef_'):
-                                # api.log_data(api.clock().tick,"bidding",state,1,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
-                                api.log_data(f"{api.clock().tick}\tbidding\t{state}\t{1}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
-
-                        api.get_order().bid_start_time = api.clock().tick
-
-                        self.my_bid = self.formulate_bid(order,api.get_battery_level())
-                        # print("bid", self.id,self.my_bid,zorder.id) # <-----------------------------
-                        api.make_bid(self.my_bid)
-                        self.state = State.INSIDE_DEPOT_MADE_BID
-                    else:
-                        if hasattr(self, 'sgd_clf'):
-                            if hasattr(self.sgd_clf, 'coef_'):
-                                # api.log_data(api.clock().tick,"bidding",state,0,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
-                                api.log_data(f"{api.clock().tick}\tbidding\t{state}\t{0}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
+                    self.my_bid = self.formulate_bid(order,api.get_battery_level())
+                    # print("bid", self.id,self.my_bid,order.id) # <-----------------------------
+                    api.make_bid(self.my_bid)
+                    self.state = State.INSIDE_DEPOT_MADE_BID
+                else:
+                    api.clear_next_order()
+                    if hasattr(self, 'sgd_clf'):
+                        if hasattr(self.sgd_clf, 'coef_'):
+                            api.log_data(f"{api.clock().tick}\tbidding\t{state}\t{0}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
 
 
         elif self.state == State.INSIDE_DEPOT_MADE_BID:
@@ -190,6 +170,7 @@ class NaiveBehavior(Behavior):
                 self.state = State.INSIDE_DEPOT_AVAILABLE
 
             self.my_bid = None
+            api.clear_next_order()
             api.make_bid(self.my_bid)
 
         api.update_state(self.state)
@@ -228,7 +209,10 @@ class NaiveBehavior(Behavior):
         pass
 
     def bidding_policy(self,state):
-        return True
+        if state[2] >= self.working_threshold:
+            return True
+        else:
+            return False
 
     def formulate_bid(self,order,battery_level):
         return battery_level
@@ -240,41 +224,25 @@ class NaiveBehavior(Behavior):
             bids = self.bids[0]
             bidders = self.bids[1]
 
+            # find the max received bid
             max_value = np.max(bids)
 
-            if self.my_bid > max_value:
-                max_value = self.my_bid
-
-            normalised_bids = [float(x)/max_value for x in bids]
-            my_normalised_bid = float(self.my_bid)/max_value
-            
-            if self.bidding_strategy == "WeakPrioritisation":
-                A = 0
-            elif self.bidding_strategy == "AveragePrioritisation":
-                A = 0.5
-            elif self.bidding_strategy == "StrongPrioritisation":
-                A = 1
-            elif self.bidding_strategy == "Hybrid":
-                A = 2/(1+np.exp(-attempted))-1
-
-            bids_distances = [abs(bid-A) for bid in normalised_bids]
-
-            index=np.argmin(bids_distances)
-            min_distance_value = bids_distances[index]
-
-            if bids_distances.count(min_distance_value) == 1:
-                best_bid = [min_distance_value, bidders[index]]
-            else:
-                bidders_with_min_bid = [bidders[i] for i in range(len(bidders)) if bids_distances[i] == min_distance_value]
-                best_bid = [min_distance_value, max(bidders_with_min_bid)]
-
-            my_distance_value = abs(my_normalised_bid-A)
-
-            if my_distance_value < best_bid[0] or (my_distance_value == best_bid[0] and self.id > best_bid[1]):
+            if self.my_bid > max_value: # If I am better than the max than I am the winner 
                 return True
-            else:
+
+            elif self.my_bid == max_value: # If my bid is equal to the max then I have to compare IDs
+                bidders_with_max_bid = [bidders[i] for i in range(len(bidders)) if bids[i] == max_value]
+                max_id_max_bid = max(bidders_with_max_bid)
+
+                if self.id > max_id_max_bid: # If my id is highest then I am the winner
+                    return True
+                else: # If my id is lower than I lost
+                    return False
+
+            else: # If my bid is lower than the max of the received then I lost
                 return False
-        else:
+
+        else: # If I am the only bidder than I am the winner
             return True
 
 
@@ -479,6 +447,49 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
                 print(self.id,"initialised!")
 
                 self.initialised=True
+
+
+    def evaluate_bids(self,attempted):
+        
+        if len(self.bids[0])>0:
+
+            bids = self.bids[0]
+            bidders = self.bids[1]
+
+            max_value = np.max(bids)
+
+            if self.my_bid > max_value:
+                max_value = self.my_bid
+
+            normalised_bids = [float(x)/max_value for x in bids]
+            my_normalised_bid = float(self.my_bid)/max_value
+            
+            if self.bidding_strategy == "Weakest":
+                A = 0
+            elif self.bidding_strategy == "Strongest" or self.bidding_strategy == "Random":
+                A = 1
+            elif self.bidding_strategy == "Adaptive":
+                A = 2/(1+np.exp(-attempted))-1
+
+            bids_distances = [abs(bid-A) for bid in normalised_bids]
+
+            index=np.argmin(bids_distances)
+            min_distance_value = bids_distances[index]
+
+            if bids_distances.count(min_distance_value) == 1:
+                best_bid = [min_distance_value, bidders[index]]
+            else:
+                bidders_with_min_bid = [bidders[i] for i in range(len(bidders)) if bids_distances[i] == min_distance_value]
+                best_bid = [min_distance_value, max(bidders_with_min_bid)]
+
+            my_distance_value = abs(my_normalised_bid-A)
+
+            if my_distance_value < best_bid[0] or (my_distance_value == best_bid[0] and self.id > best_bid[1]):
+                return True
+            else:
+                return False
+        else:
+            return True
 
 
 # class DecentralisedLearningBehavior_ProbabilityBids(NaiveBehavior):

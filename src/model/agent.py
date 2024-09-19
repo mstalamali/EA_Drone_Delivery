@@ -36,6 +36,7 @@ class AgentAPI:
 
         # Packager related functions
         self.carries_package = agent.carries_package
+        self.clear_next_order = agent.clear_next_order
         self.pickup_package = agent.pickup_package
         self.deliver_package = agent.deliver_package
         self.return_package = agent.return_package
@@ -47,7 +48,7 @@ class AgentAPI:
         
 
 class Agent:
-    colors = {State.INSIDE_DEPOT_CHARGING: "red", State.INSIDE_DEPOT_MADE_BID: "orange", State.INSIDE_DEPOT_AVAILABLE: "green",\
+    colors = {State.INSIDE_DEPOT_MADE_BID: "orange", State.INSIDE_DEPOT_AVAILABLE: "green",\
                 State.ATTEMPTING_DELIVERY: "cyan", State.RETURNING_SUCCESSFUL: "magenta", State.RETURNING_FAILED: "gray"}
 
     def __init__(self, robot_id, x, y, environment, log_params, behavior_params,order_params, clock, speed, radius, frame_weight, battery_weight,
@@ -112,10 +113,11 @@ class Agent:
         self.behavior = behavior_factory(behavior_params,order_params)
 
         self.attempted_delivery = None
+        self.next_order = None
 
         self._in_depot = True
 
-        self.color = self.colors[State.INSIDE_DEPOT_CHARGING]
+        self.color = self.colors[State.INSIDE_DEPOT_AVAILABLE]
 
         self._bid = None
 
@@ -301,7 +303,7 @@ class Agent:
         else:
             self.comm_state = CommunicationState.CLOSED
 
-        if state == State.INSIDE_DEPOT_CHARGING or state == State.INSIDE_DEPOT_AVAILABLE or state == State.INSIDE_DEPOT_MADE_BID:
+        if state == State.INSIDE_DEPOT_AVAILABLE or state == State.INSIDE_DEPOT_MADE_BID:
             self._in_depot = True
             self._charging = True
             self.pos=[self.environment.depot[0],self.environment.depot[1]]
@@ -309,14 +311,25 @@ class Agent:
             self._in_depot = False
             self._charging = False
 
+        if state == State.INSIDE_DEPOT_MADE_BID:
+            self._made_bid = True
+        else:
+            self._made_bid = False
+
         self.color = self.colors[state]
 
+    def made_bid(self):
+        return self._made_bid
+
 # ------> Delivery related functions
+    def receive_next_order(self,next_order):
+        self.next_order = next_order
+    
     def get_order(self):
-        if len(self.pending_orders_list)>0:
-            return self.pending_orders_list[self.environment.current_order]
-        else:
-            return None
+        return self.next_order
+
+    def clear_next_order(self):
+        self.next_order = None
 
     def deliver_package(self):
         self._carries_package = False
@@ -361,7 +374,8 @@ class Agent:
         self.log_charge("return")
 
     def pickup_package(self):
-        order = self.pending_orders_list[self.environment.current_order]
+        order = self.next_order
+        # print(self.clock().tick, self.id,"taking order",order.id)
         self.pending_orders_list[self.environment.current_order] = None
 
         if self.environment.evaluation_type == "episodes":

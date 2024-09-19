@@ -43,15 +43,6 @@
       }
     },
     {
-      "class": "DecentralisedLearningBehavior_HeuristicBids",
-      "population_size": S_DECENTRALISED_LEARNING_HEURISTIC,
-      "parameters": {
-        "working_threshold": WORKING_THRESH,
-        "exploration_probability": EXPLORATION_PROBABILITY,
-        "initialisation": INIT_PTS
-      }
-    },
-    {
       "class": "DecentralisedLearningBehavior_DistanceBids",
       "population_size": S_DECENTRALISED_LEARNING_DISTANCE,
       "parameters": {
@@ -69,16 +60,6 @@
         "scaler_initialisation_method": "SCALER_INIT_METHOD",
         "model_initialisation_method": "MODEL_INIT_METHOD"
       }
-    },
-     {
-    "class": "DecentralisedLearningBehavior_ProbabilityBids",
-    "population_size": S_DECENTRALISED_LEARNING_PROBABILITY,
-    "parameters": {
-      "working_threshold": WORKING_THRESH,
-      "exploration_probability": EXPLORATION_PROBABILITY,
-        "initialisation": INIT_PTS,
-        "bidding_strategy": "BIDDING_STRATEGY"
-    }
     }
   ],
   "orders": {
@@ -86,6 +67,7 @@
       "orders_per_episode": ORDERS_PER_EPISODE,
       "orders_arrival_probability": 0.01,
       "interval_between_orders_arrivals": ORDER_ARRIVAL_INTERVAL
+      "order_processing_interval": ORDER_PROCESSING_INTERVAL
     },
 
     "distances":{
@@ -104,6 +86,7 @@
     "output_directory": "DATA_FOLDER",
     "filename": "DATA_FILE_NAME",
     "recording_interval": DATA_RECORDING_INTERVAL,
+    "learning_evaluation_interval": LEARNING_EVALUATION_INTERVAL,
     "agents_data_logging": AGENTS_DATA_LOGGING,
     "charge_level_logging": CHARGE_LEVEL_LOGGING
   }
