@@ -1,4 +1,4 @@
-from math import cos, sin, radians
+from math import cos, sin, radians,sqrt
 from model.agent import Agent
 from model.navigation import Location, Order
 from helpers.utils import norm, distance_between
@@ -248,8 +248,8 @@ class Environment:
 
 
     def get_sensors(self, robot):
-        orientation = robot.orientation
-        speed = robot.speed()
+        # orientation = robot.orientation
+        # speed = robot.speed()
         sensors = {Location.DELIVERY_LOCATION: self.senses(robot, Location.DELIVERY_LOCATION),
                    Location.DEPOT_LOCATION: self.senses(robot, Location.DEPOT_LOCATION) }
         return sensors
@@ -267,9 +267,11 @@ class Environment:
 
     def senses(self, robot, location):
         if robot.locations[location]!=tuple():
-            dist_vector = robot.pos - np.array([robot.locations[location][0], robot.locations[location][1]])
-            dist_from_center = np.sqrt(dist_vector.dot(dist_vector))
-            return dist_from_center < robot.locations[location][2]
+            return sqrt((robot.pos[0]-robot.locations[location][0])**2 + (robot.pos[1]-robot.locations[location][1])**2) < robot.locations[location][2]
+
+            # dist_vector = robot.pos - np.array([robot.locations[location][0], robot.locations[location][1]])
+            # dist_from_center = np.sqrt(dist_vector.dot(dist_vector))
+            # return dist_from_center < robot.locations[location][2]
 
     def is_on_top_of_spawn(self, robot, location):
         dist_vector = robot.pos - self.foraging_spawns[location].get(robot.id)
