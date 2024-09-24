@@ -8,11 +8,19 @@ import numpy as np
 class CommunicationSession:
     def __init__(self, client, neighbors):
         self._client = client
-        self._bids = [n._bid for n in neighbors if n.comm_state == CommunicationState.OPEN]
-        self._bidders = [n.id for n in neighbors if n.comm_state == CommunicationState.OPEN]
+        self._bids = [n._bid[0] for n in neighbors if n.comm_state == CommunicationState.OPEN and n._bid[0]!=None]
+        self._bidders = [n.id for n in neighbors if n.comm_state == CommunicationState.OPEN and n._bid[0]!=None ]
+
+
+        self._reservation_bids = [n._bid[1] for n in neighbors if n.comm_state == CommunicationState.OPEN and n._bid[1]!=None]
+        self._reserving_bidders = [n.id for n in neighbors if n.comm_state == CommunicationState.OPEN and n._bid[1]!=None]
+
 
     def get_bids(self):
         return [self._bids,self._bidders]
+
+    def get_reservation_bids(self):
+        return [self._reservation_bids,self._reserving_bidders]
 
     # def get_best_bid(self):
     #     if len(self._bids)>0:

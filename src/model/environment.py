@@ -238,6 +238,7 @@ class Environment:
                               x=self.depot[0],
                               y=self.depot[1],
                               environment=self,
+                              reservation_start_time=self.simulation_steps/2,
                               log_params=log_params,
                               behavior_params=behavior_params,
                               order_params=order_params,

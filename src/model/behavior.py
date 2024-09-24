@@ -17,6 +17,7 @@ class State(Enum):
     EVALUATING = 3
     ATTEMPTING = 4
     RETURNING = 5
+    PREPARING = 6
 
 def behavior_factory(behavior_params,order_params):
     # if behavior_params['class'] == "DecentralisedLearningBehavior":
@@ -52,6 +53,7 @@ class NaiveBehavior(Behavior):
         self.takeoff_battery_level = 100.0
         self.best_bid = None
         self.my_bid = None
+        self.my_reservation_bid = None
         self.max_difficulty = 1.0
         self.max_distance = max_distance
         self.max_weight = max_package_weight
@@ -69,6 +71,7 @@ class NaiveBehavior(Behavior):
 
     def check_others_bid(self, session: CommunicationSession):
         self.bids = session.get_bids()
+        self.reservation_bids = session.get_reservation_bids()
 
     def update_state(self, sensors, api):
         
@@ -133,8 +136,20 @@ class NaiveBehavior(Behavior):
 
                 self.my_bid = self.formulate_bid(api.get_order(),api.get_battery_level())
                 # print("bid", self.id,self.my_bid,order.id) # <-----------------------------
-                api.make_bid(self.my_bid)
+                api.make_bid(self.my_bid,None)
                 self.state = State.EVALUATING
+
+            elif self.reservation_policy(state):
+                        
+                if api.is_time_to_start_reserving():
+
+                    self.my_reservation_bid = self.formulate_reservation_bid(api.get_order(),api.get_battery_level(),api.get_zero_to_handred_charging_time())
+
+                    # print("reservation bid", api.get_order().id ,self.id,self.my_reservation_bid) # <-----------------------------
+
+                    api.make_bid(None,self.my_reservation_bid)
+
+                    self.state = State.EVALUATING
             else:
                 self.state = State.WAITING
                 api.clear_next_order()
@@ -149,9 +164,45 @@ class NaiveBehavior(Behavior):
             
             # print(self.best_bid,self.my_bid == self.best_bid[0], self.id > self.best_bid[1])
             
-            if api.get_order()!=None and self.evaluate_bids(api.get_order().attempted): # robots wins the bid
+            if self.my_bid!= None:
+                if api.get_order()!=None and self.evaluate_bids(api.get_order().attempted): # robots wins the bid
 
-                # print(self.id, "*********************** I won bid! *************************",api.get_order().id)
+                    # print(self.id, "*********************** I won bid! *************************",api.get_order().id)
+                    api.pickup_package()
+
+                    self.navigation_table.replace_information_entry(Location.DELIVERY_LOCATION, Target(api.get_package_info().location))
+                    
+                    self.state = State.ATTEMPTING
+
+                    self.takeoff_battery_level = api.get_battery_level()
+                
+                else:
+                    self.state = State.WAITING
+
+            elif self.my_reservation_bid!= None:
+
+                if api.get_order()!=None and self.evaluate_reservation_bids():
+
+                    api.reserve_package()
+                    # print(self.id, "*********************** I won reservation bid! *************************",api.get_package_info().id)
+
+                    self.state= State.PREPARING
+
+                else:
+                    self.state = State.WAITING
+
+            self.my_bid = None
+            self.my_reservation_bid = None
+            api.clear_next_order()
+            api.make_bid(self.my_bid,self.my_reservation_bid)
+
+        elif self.state == State.PREPARING:
+
+            state = [api.get_package_info().distance,api.get_package_info().weight,api.get_battery_level()]
+
+            if self.bidding_policy(state):
+
+                # print("------>>>>>>>>>>>>> finally managed to take the package",api.get_package_info().id,state[2])
                 api.pickup_package()
 
                 self.navigation_table.replace_information_entry(Location.DELIVERY_LOCATION, Target(api.get_package_info().location))
@@ -159,13 +210,7 @@ class NaiveBehavior(Behavior):
                 self.state = State.ATTEMPTING
 
                 self.takeoff_battery_level = api.get_battery_level()
-            
-            else:
-                self.state = State.WAITING
 
-            self.my_bid = None
-            api.clear_next_order()
-            api.make_bid(self.my_bid)
 
         api.update_state(self.state)
 
@@ -208,8 +253,15 @@ class NaiveBehavior(Behavior):
         else:
             return False
 
+    def reservation_policy(self,state):
+        return True
+
     def formulate_bid(self,order,battery_level):
         return battery_level
+
+    def formulate_reservation_bid(self,order,battery_level,zero_to_handred):
+        # print(self.id,order.id,"Current battery level: ",battery_level,self.bidding_threshold - battery_level,-(self.bidding_threshold - battery_level)*zero_to_handred/100.0)
+        return (self.working_threshold - battery_level)*zero_to_handred/100.0
 
     def evaluate_bids(self,attempted):
         
@@ -239,6 +291,31 @@ class NaiveBehavior(Behavior):
         else: # If I am the only bidder than I am the winner
             return True
 
+    def evaluate_reservation_bids(self):
+        if len(self.reservation_bids[0])>0:
+            bids = self.reservation_bids[0]
+            bidders = self.reservation_bids[1]
+
+            # find the min received reservation bid
+            min_value = np.min(bids)
+
+            if self.my_reservation_bid < min_value: # If I am better than the max than I am the winner 
+                return True
+
+            elif self.my_bid == min_value: # If my bid is equal to the max then I have to compare IDs
+                bidders_with_min_bid = [bidders[i] for i in range(len(bidders)) if bids[i] == min_value]
+                max_id_min_bid = max(bidders_with_min_bid)
+
+                if self.id > max_id_min_bid: # If my id is highest then I am the winner
+                    return True
+                else: # If my id is lower than I lost
+                    return False
+
+            else: # If my bid is lower than the max of the received then I lost
+                return False
+
+        else:
+            return True
 
 class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
     def __init__(self, working_threshold = 50.0,initial_assumption = 1, exploration_probability = 0.001,initialisation = 0, data_augmentation=0,loss_function = "hinge",learning_rate='optimal', alpha = 0.0001, eta0 =0.01 , scaler_type="standard", bidding_strategy = 'weak_prioritisation', model_initialisation_method = "Assumption",scaler_initialisation_method='KnownMeanVariance', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
@@ -394,6 +471,17 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
         else:
             return True
 
+    def reservation_policy(self,state):
+        state_scaled = self.transform(state)
+        scaled_min_battery_level = (-self.sgd_clf.intercept_[0] - self.sgd_clf.coef_[0,0] * state_scaled[0]- self.sgd_clf.coef_[0,1] * state_scaled[1])/self.sgd_clf.coef_[0,2]
+        later_state = state_scaled
+        later_state[2]= scaled_min_battery_level
+        min_battery_level = self.inverse_transform(later_state)[2]
+
+        if min_battery_level <= 100.0:
+            return True
+        else:
+            return False
 
     def formulate_bid(self,order,battery_level):
         if self.initialised:
@@ -420,6 +508,20 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
         else:
             return battery_level
 
+    def formulate_reservation_bid(self,order,battery_level,zero_to_handred):
+        state = [order.distance,order.weight,battery_level]
+        state_scaled = self.transform(state)
+        scaled_min_battery_level = (-self.sgd_clf.intercept_[0] - self.sgd_clf.coef_[0,0] * state_scaled[0]- self.sgd_clf.coef_[0,1] * state_scaled[1])/self.sgd_clf.coef_[0,2]
+            
+
+        later_state = state_scaled
+        later_state[2]= scaled_min_battery_level
+
+        min_battery_level = self.inverse_transform(later_state)[2]
+
+        # print(self.id,order.id,"Current battery level: ",battery_level,min_battery_level - battery_level,-(min_battery_level-battery_level) * zero_to_handred/100.0)
+
+        return (min_battery_level-battery_level) * zero_to_handred/100.0
 
     # def learn(take_off_battery_level, package_location, package_weight, reward):
     def learn(self,state, outcome):
@@ -506,6 +608,9 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
 
     def transform(self,state):
         return [(state[0]-self.scaler_mean[0])/self.scaler_std[0], (state[1]-self.scaler_mean[1])/self.scaler_std[1], (state[2]-self.scaler_mean[2])/self.scaler_std[2]]
+
+    def inverse_transform(self,scaled_state):
+        return [scaled_state[0]*self.scaler_std[0]+self.scaler_mean[0], scaled_state[1]*self.scaler_std[1]+self.scaler_mean[1], scaled_state[2]*self.scaler_std[2]+self.scaler_mean[2]]
 
     def decision_function(self,state):
         return self.sgd_clf.coef_[0,0] * state[0] + self.sgd_clf.coef_[0,1] * state[1] +  self.sgd_clf.coef_[0,2] * state[2] + self.sgd_clf.intercept_[0]      

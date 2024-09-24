@@ -37,10 +37,14 @@ class AgentAPI:
         # Packager related functions
         self.carries_package = agent.carries_package
         self.clear_next_order = agent.clear_next_order
+        self.reserve_package = agent.reserve_package
         self.pickup_package = agent.pickup_package
         self.deliver_package = agent.deliver_package
         self.return_package = agent.return_package
         self.get_package_info = agent.get_package_info
+        
+        self.is_time_to_start_reserving = agent.is_time_to_start_reserving
+        self.get_zero_to_handred_charging_time = agent.get_zero_to_handred_charging_time
 
         # Logging function
         self.log_data = agent.log_data
@@ -49,9 +53,9 @@ class AgentAPI:
 
 class Agent:
     colors = {State.EVALUATING: "orange", State.WAITING: "red", State.DECIDING: "green",\
-                State.ATTEMPTING: "cyan", State.RETURNING: "magenta"}
+                State.ATTEMPTING: "cyan", State.RETURNING: "magenta", State.PREPARING: "yellow"}
 
-    def __init__(self, robot_id, x, y, environment, log_params, behavior_params,order_params, clock, speed, radius, frame_weight, battery_weight,
+    def __init__(self, robot_id, x, y, environment, reservation_start_time, log_params, behavior_params,order_params, clock, speed, radius, frame_weight, battery_weight,
                  theoritical_battery_capacity, min_battery_health, max_battery_health, noise_sampling_mu, noise_sampling_sigma, noise_sd, fuel_cost,
                  communication_radius):
 
@@ -119,9 +123,10 @@ class Agent:
 
         self.color = self.colors[State.WAITING]
 
-        self._bid = None
+        self._bid = [None,None]
 
         self.api = AgentAPI(self)
+
 
         self.g = 9.81 # Gravity constant (kg/s^2)
         self.n_r = 8  # Number of rotors
@@ -140,6 +145,9 @@ class Agent:
         if self.data_logging:
             self.logfile = open(f"{log_params[1]}/robot{str(self.id)}_{self.log_filename_suffix}","w")
             # self.logfile.write("Time(s)\tEvent\tState\tOutcome\tw0\tw1\tw2\tb\n")
+
+        self.reservation_start_time = reservation_start_time
+        self._zero_to_handred_charging_time = self.theoritical_battery_capacity /(self.charger_power * self.charge_efficiency)
 
         # total_weight = self.frame_weight + self.battery_weight + 5
         # print((self.theoritical_battery_capacity*0.95/(pow(self.g*total_weight,1.5)/pow(2*self.n_r*self.rho*self.zeta,0.5)/3600.0))*self._speed)
@@ -257,8 +265,8 @@ class Agent:
             dr = self._speed * dr / norm_dr
         self.dr = dr
 
-    def set_bid(self, bid):
-        self._bid = bid
+    def set_bid(self, bid,reservation_bid):
+        self._bid = [bid,reservation_bid]
 
 # ------> Charging related functions
     def update_battery_state(self):
@@ -289,6 +297,9 @@ class Agent:
     def get_battery_level(self):
         return self._battery_level
 
+    def get_zero_to_handred_charging_time(self):
+        return self._zero_to_handred_charging_time
+
 # ------> State related functions
     def charging(self):
         return self._charging
@@ -303,13 +314,18 @@ class Agent:
         else:
             self.comm_state = CommunicationState.CLOSED
 
-        if state == State.WAITING or state==State.DECIDING or state == State.EVALUATING:
-            self._in_depot = True
+        if state == State.WAITING or state==State.DECIDING or state==State.PREPARING or state == State.EVALUATING:
             self._charging = True
             self.pos=[self.environment.depot[0],self.environment.depot[1]]
         else:
-            self._in_depot = False
             self._charging = False
+
+
+        if state == State.WAITING or state==State.DECIDING or state == State.EVALUATING:
+            self._in_depot = True
+            self.pos=[self.environment.depot[0],self.environment.depot[1]]
+        else:
+            self._in_depot = False
 
         if state == State.EVALUATING:
             self._made_bid = True
@@ -339,6 +355,10 @@ class Agent:
         self.items_delivered += 1
         self.environment.number_of_successes += 1
         self.environment.ongoing_attempts -= 1
+
+    def reserve_package(self):
+        self.attempted_delivery = self.next_order
+        self.pending_orders_list[self.environment.current_order] = None
 
     # def return_package(self):
     #     self._carries_package = False
@@ -374,9 +394,10 @@ class Agent:
         self.log_charge("return")
 
     def pickup_package(self):
-        order = self.next_order
-        # print(self.clock().tick, self.id,"taking order",order.id)
-        self.pending_orders_list[self.environment.current_order] = None
+
+        if self.attempted_delivery == None:
+            self.attempted_delivery=self.next_order
+            self.pending_orders_list[self.environment.current_order] = None
 
         if self.environment.evaluation_type == "episodes":
             if order.arrival_time == float('inf'):
@@ -384,8 +405,7 @@ class Agent:
 
         self._carries_package = True
         # self.locations[Location.DELIVERY_LOCATION] = (order.location[0],order.location[1],self.speed())
-        self.locations[Location.DELIVERY_LOCATION] = (order.location[0],order.location[1],int(order.radius))
-        self.attempted_delivery=order
+        self.locations[Location.DELIVERY_LOCATION] = (self.attempted_delivery.location[0],self.attempted_delivery.location[1],int(self.attempted_delivery.radius))
         self.attempted_delivery.attempted+=1
         self.environment.ongoing_attempts+=1
         self.log_charge("takeoff")
@@ -508,3 +528,8 @@ class Agent:
             self.charge_level_logging.append([self.id, self.clock().tick, event_type, self.get_battery_level()])
 
 
+    def is_time_to_start_reserving(self):
+        if self.clock().tick >= self.reservation_start_time:
+            return True
+        else:
+            return False
