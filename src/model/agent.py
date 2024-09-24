@@ -332,6 +332,7 @@ class Agent:
         self.next_order = None
 
     def deliver_package(self):
+        # print("--------->",self.clock().tick, self.id,"delivered order",self.attempted_delivery.id)
         self._carries_package = False
         self.attempted_delivery.fulfillment_time = self.clock().tick
         self.successful_orders_list.append(self.attempted_delivery)
@@ -362,6 +363,7 @@ class Agent:
         self.attempted_delivery.bid_start_time = float('inf')
         
         # Put back the failed order at the end of the queue
+        self.attempted_delivery.attempted+=1
         self.pending_orders_list[self.attempted_delivery.id-1]=self.attempted_delivery
 
         # Put back the failed order at the human-based delivery queue
@@ -374,19 +376,16 @@ class Agent:
         self.log_charge("return")
 
     def pickup_package(self):
-        order = self.next_order
-        # print(self.clock().tick, self.id,"taking order",order.id)
+        self.attempted_delivery = self.next_order
+        # print("--------->",self.clock().tick, self.id,"taking order",self.attempted_delivery.id)
         self.pending_orders_list[self.environment.current_order] = None
 
         if self.environment.evaluation_type == "episodes":
-            if order.arrival_time == float('inf'):
-                order.arrival_time = self.clock().tick
+            if self.attempted_delivery.arrival_time == float('inf'):
+                self.attempted_delivery.arrival_time = self.clock().tick
 
         self._carries_package = True
-        # self.locations[Location.DELIVERY_LOCATION] = (order.location[0],order.location[1],self.speed())
-        self.locations[Location.DELIVERY_LOCATION] = (order.location[0],order.location[1],int(order.radius))
-        self.attempted_delivery=order
-        self.attempted_delivery.attempted+=1
+        self.locations[Location.DELIVERY_LOCATION] = (self.attempted_delivery.location[0],self.attempted_delivery.location[1],int(self.attempted_delivery.radius))
         self.environment.ongoing_attempts+=1
         self.log_charge("takeoff")
 

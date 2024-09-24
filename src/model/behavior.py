@@ -149,9 +149,10 @@ class NaiveBehavior(Behavior):
             
             # print(self.best_bid,self.my_bid == self.best_bid[0], self.id > self.best_bid[1])
             
-            if api.get_order()!=None and self.evaluate_bids(api.get_order().attempted): # robots wins the bid
+            if api.get_order()!=None and self.evaluate_bids(int(api.get_order().attempted)): # robots wins the bid
 
-                # print(self.id, "*********************** I won bid! *************************",api.get_order().id)
+                # print(self.id, "*********************** I won bid! ************************",api.get_order().id,"my bid is",self.my_bid)
+
                 api.pickup_package()
 
                 self.navigation_table.replace_information_entry(Location.DELIVERY_LOCATION, Target(api.get_package_info().location))
@@ -468,10 +469,12 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
             bids = self.bids[0]
             bidders = self.bids[1]
 
+
             max_value = np.max(bids)
 
             if self.my_bid > max_value:
                 max_value = self.my_bid
+
 
             normalised_bids = [float(x)/max_value for x in bids]
             my_normalised_bid = float(self.my_bid)/max_value
@@ -483,9 +486,11 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
             elif self.bidding_strategy == "Adaptive":
                 A = 2/(1+np.exp(-attempted))-1
 
+
             bids_distances = [abs(bid-A) for bid in normalised_bids]
 
             index=np.argmin(bids_distances)
+
             min_distance_value = bids_distances[index]
 
             if bids_distances.count(min_distance_value) == 1:
@@ -493,6 +498,7 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
             else:
                 bidders_with_min_bid = [bidders[i] for i in range(len(bidders)) if bids_distances[i] == min_distance_value]
                 best_bid = [min_distance_value, max(bidders_with_min_bid)]
+
 
             my_distance_value = abs(my_normalised_bid-A)
 
