@@ -303,7 +303,7 @@ class Agent:
         else:
             self.comm_state = CommunicationState.CLOSED
 
-        if state == State.WAITING or state == State.EVALUATING:
+        if state == State.WAITING or state==State.DECIDING or state == State.EVALUATING:
             self._in_depot = True
             self._charging = True
             self.pos=[self.environment.depot[0],self.environment.depot[1]]

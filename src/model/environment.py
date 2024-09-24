@@ -128,7 +128,7 @@ class Environment:
                             self.current_order += 1
 
                     self.current_order_advertised = False
-                elif self.no_bids():
+                elif self.no_bids() and self.any_UAV_in():
                     # print(self.clock.tick,"no bids",self.no_bids())
                     self.current_order += 1
 
