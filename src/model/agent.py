@@ -380,7 +380,8 @@ class Agent:
     def return_package(self):
         self._carries_package = False
         self.attempted_delivery.bid_start_time = float('inf')
-        
+        self.attempted_delivery.attempted+=1
+
         # Put back the failed order at the end of the queue
         self.pending_orders_list[self.attempted_delivery.id-1]=self.attempted_delivery
 
@@ -406,7 +407,6 @@ class Agent:
         self._carries_package = True
         # self.locations[Location.DELIVERY_LOCATION] = (order.location[0],order.location[1],self.speed())
         self.locations[Location.DELIVERY_LOCATION] = (self.attempted_delivery.location[0],self.attempted_delivery.location[1],int(self.attempted_delivery.radius))
-        self.attempted_delivery.attempted+=1
         self.environment.ongoing_attempts+=1
         self.log_charge("takeoff")
 
