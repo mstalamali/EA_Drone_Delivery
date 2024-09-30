@@ -3,20 +3,14 @@ from helpers.utils import rotation_matrix
 import numpy as np
 from random import random, uniform
 
+# Enum class defining locations of interest
 class Location(Enum):
     DELIVERY_LOCATION = 1
     DEPOT_LOCATION = 2
 
+# Class defining an order
 class Order:
     def __init__(self, env_width, env_height, depot, order_id, arrival_time ,order_params):
-        # Set order's location
-        # while True:
-        #     self.location = [ random() * env_width , random() * env_height] 
-        #     dist_vector = self.location - np.array([depot[0], depot[1]])
-        #     self.distance = np.sqrt(dist_vector.dot(dist_vector))
-        #     if self.distance >= order_params["distances"]["min_distance"] and self.distance <= order_params["distances"]["max_distance"]:
-        #         break
-
         self.distance = np.sqrt(uniform(order_params["distances"]["min_distance"]*order_params["distances"]["min_distance"],order_params["distances"]["max_distance"]*order_params["distances"]["max_distance"]))
 
         theta = uniform(0, 2 * np.pi)
@@ -41,6 +35,7 @@ class Order:
 
         # print(self.location,self.weight)
 
+# Class that define a location of interest
 class Target:
     def __init__(self, location):
         self.location = location
@@ -74,7 +69,7 @@ class Target:
         rot_mat = rotation_matrix(angle)
         self.relative_distance = rot_mat.dot(self.relative_distance)
 
-
+# Class that define the robot's navigation
 class NavigationTable:
     def __init__(self,entries=dict()):
         self.entries = entries

@@ -12,6 +12,7 @@ try:
 except ModuleNotFoundError:
     print("Tkinter not installed...")
 
+# class that implements the environment (including the robots)
 class Environment:
 
     def __init__(self, width, height, pixel_to_m, depot, evaluation_type, log_params, order_params, clock, simulation_steps, agent_params, behavior_params):
@@ -25,7 +26,6 @@ class Environment:
         self.pending_orders_list = []
         self.successful_orders_list = deque()
         self.failed_orders_list = deque()      
-        self.best_bot_id = self.get_best_bot_id()
         self.order_location_img = None
         self.package_image = None
         self.robot_image = None
@@ -44,7 +44,6 @@ class Environment:
             self.create_episode_orders_list()
         else:
             self.draw_all_orders(order_params)
-            # self.update_pending_orders_list(order_params)
 
 
         self.create_robots(log_params,agent_params, behavior_params,order_params)
@@ -72,35 +71,33 @@ class Environment:
 
     def step(self):
         
-        # print(self.clock.tick)
-
-        # 2. Update orders' list
+        # 1. Update orders' list
         if self.evaluation_type == "continuous":
             self.update_pending_orders_list(self.order_params)
 
 
-        # 4. Execture robot step
+        # 2. Exectue robot step
         for robot in self.population:
             # self.check_locations(robot)
             robot.step()
 
 
-        # 1. compute neighbors
+        # 3. compute neighbors table
         pop_size = len(self.population)
         neighbors_table = [[] for i in range(pop_size)]
         for id1 in range(pop_size):
-            if self.population[id1].in_depot():
+            if self.population[id1].in_depot(): # if the robot is in depot it will have neighbours
                 for id2 in range(id1 + 1, pop_size):
-                    if self.population[id2].in_depot():
+                    if self.population[id2].in_depot(): # the robot's neighbours are all those that are in depot
                         neighbors_table[id1].append(self.population[id2])
                         neighbors_table[id2].append(self.population[id1])
                         
-        # 3. communication
+        # 4. update robots communication
         for robot in self.population:
             robot.communicate(neighbors_table[robot.id])
 
 
-        # 4. move  to the next package if no body bidded for the current
+        # 5. move  to the next package if no body bidded for the current
         if len(self.pending_orders_list) > 0 or self.current_order_advertised:
 
             if not self.current_order_advertised:
@@ -142,37 +139,33 @@ class Environment:
                                 self.current_order += 1
 
                     self.current_order_advertised = False
-                # else:
-                    # print(self.clock.tick,"bids", not self.no_bids())
 
+    # function implementing the advertisement of an order by the FC
     def advertise_next_order(self,order):
         for robot in self.population:
             if robot.in_depot():
                 robot.receive_next_order(order)
 
+    # function for checking if there are UAVs in the FC (to know if there is no bids because no one is there or because UAVs are not bidding)
     def any_UAV_in(self):
         for robot in self.population:
             if robot.in_depot():
                 return True
         return False
 
+    # function imlementing FC listening to bids from robots (it only says if there is a bid or not, does not provide information on the bids, decentralised!)
     def no_bids(self):
         for robot in self.population:
             if robot.made_bid():
                 return False
         return True
 
+    # function to create orders in the case of an episode-based testing
     def create_episode_orders_list(self):
         while len(self.pending_orders_list)<self.order_params["times"]['orders_per_episode']:
             self.pending_orders_list.append(Order(self.width, self.height, self.depot,float('inf'), self.order_params))
 
-        # for i in range(len(self.pending_orders_list)):
-        #     print(self.pending_orders_list[i].location)
-        #     print(self.pending_orders_list[i].weight)
-        #     print(self.pending_orders_list[i].arrival_time)
-        #     print(self.pending_orders_list[i].fulfillment_time)
-        #     print(self.pending_orders_list[i].bid_start_time)
-
+    # function run at the beggining to draw all orders that will arrive in the future
     def draw_all_orders(self, order_params):
         time = 0
         order_id = 1
@@ -185,49 +178,15 @@ class Environment:
 
         print(f'Drawing all orders = {len(self.all_orders_list)}')
 
-
+    # function that implements order arrival as simulation progresses
     def update_pending_orders_list(self, order_params):
-        
-        # Orders arrival
         if len(self.all_orders_list)>0:
             if self.clock.tick >= self.all_orders_list[0].arrival_time:
                 new_order = self.all_orders_list.popleft()
                 # print(self.clock.tick,"new order",new_order.id)
                 self.pending_orders_list.append(new_order)
 
-        # Check look ahead queue and remove orders that spent long time in the the look-ahead queue        
-        # i = 1
-        # while len(self.lookahead_list) > 1 and i < len(self.lookahead_list):
-        #     # print("********************* CHECKING",i)
-        #     if (self.clock.tick-self.lookahead_list[i].in_look_ahead) > order_params["timeout"]:
-        #         # print("********************* DELETING",self.lookahead_list[i].in_look_ahead)
-        #         self.failed_orders_list.append(self.lookahead_list[i])
-        #         del self.lookahead_list[i]
-        #         continue
-        #     i+=1
-
-        # # Transfer packages from pending to look-ahead queue:
-        # while len(self.lookahead_list) < order_params["look_ahead_size"] and len(self.pending_orders_list)>0:
-        #     order = self.pending_orders_list.popleft()
-        #     order.in_look_ahead = float(self.clock.tick)
-        #     self.lookahead_list.append(order)
-
-
-
-        # Check the queue
-
-
-        # if self.order_test < 1:
-        #     self.pending_orders_list.append(Order(self.width, self.height, self.depot, {
-        #             "orders_arrival_probability": 0.01,
-        #             "interval_between_orders_arrivals": 500.0,
-        #             "min_distance": 8000,
-        #             "radius": 50,
-        #             "min_package_weight": 1,
-        #             "max_package_weight": 5
-        #           }))
-        #     self.order_test+=1
-
+    # function that creates robot objects
     def create_robots(self, log_params, agent_params, behavior_params,order_params):
         robot_id = 0
         for behavior_params in behavior_params:
@@ -247,42 +206,18 @@ class Environment:
                 self.population.append(robot)
 
 
+    # let the robot sense if they are in depot or at delivery location
     def get_sensors(self, robot):
-        # orientation = robot.orientation
-        # speed = robot.speed()
         sensors = {Location.DELIVERY_LOCATION: self.senses(robot, Location.DELIVERY_LOCATION),
                    Location.DEPOT_LOCATION: self.senses(robot, Location.DEPOT_LOCATION) }
         return sensors
 
-    def check_border_collision(self, robot, new_x, new_y):
-        collide_x = False
-        collide_y = False
-        if new_x + robot._radius >= self.width or new_x - robot._radius < 0:
-            collide_x = True
-
-        if new_y + robot._radius >= self.height or new_y - robot._radius < 0:
-            collide_y = True
-
-        return collide_x, collide_y
-
+    # function to check if the robot has reached a location
     def senses(self, robot, location):
         if robot.locations[location]!=tuple():
             return sqrt((robot.pos[0]-robot.locations[location][0])**2 + (robot.pos[1]-robot.locations[location][1])**2) < robot.locations[location][2]
 
-            # dist_vector = robot.pos - np.array([robot.locations[location][0], robot.locations[location][1]])
-            # dist_from_center = np.sqrt(dist_vector.dot(dist_vector))
-            # return dist_from_center < robot.locations[location][2]
-
-    def is_on_top_of_spawn(self, robot, location):
-        dist_vector = robot.pos - self.foraging_spawns[location].get(robot.id)
-        return np.sqrt(dist_vector.dot(dist_vector)) < robot._radius
-
-    # def get_location(self, location, agent):
-    #     if agent.id in self.foraging_spawns[location]:
-    #         return self.foraging_spawns[location][agent.id]
-    #     else:
-    #         return np.array([agent.locations[location][0], agent.locations[location][1]])
-
+    # function that draws different visuation elements (if visualisation is activated)
     def draw(self, canvas):
         self.draw_map(canvas)
         self.draw_zones(canvas)
@@ -290,33 +225,15 @@ class Environment:
         for robot in self.population:
             # robot.draw(canvas,self.robot_image)
             robot.draw_advanced(canvas,self.robot_image_empty, self.robot_image_loaded,self.pixel_to_m)
-        # self.draw_best_bot(canvas)
 
+    # function that draws the maps 
     def draw_map(self,canvas):
         if self.background_img != None:
             canvas.create_image(self.width/(2*self.pixel_to_m), self.height/(2*self.pixel_to_m), image=self.background_img, anchor='center')
 
-    # def draw_market_stats(self, stats_canvas):
-    #     margin = 15
-    #     width = stats_canvas.winfo_width() - 2 * margin
-    #     height = 20
-    #     stats_canvas.create_rectangle(margin, 50, margin + width, 50 + height, fill="light green", outline="")
-    #     target_demand = self.market.demand
-    #     max_theoretical_supply = self.market.demand/self.demand
-    #     demand_pos_x = width*target_demand/max_theoretical_supply
-    #     supply_pos_x = width*self.market.get_supply()/max_theoretical_supply
-    #     supply_bar_width = 2
-    #     stats_canvas.create_rectangle(margin + demand_pos_x, 50, margin + width, 50 + height, fill="salmon", outline="")
-    #     stats_canvas.create_rectangle(margin + supply_pos_x - supply_bar_width/2, 48, margin + supply_pos_x + supply_bar_width/2, 52 + height, fill="gray45", outline="")
-    #     stats_canvas.create_text(margin + supply_pos_x - 5, 50 + height + 5, fill="gray45", text=f"{round(self.market.get_supply())}", anchor="nw", font="Arial 10")
 
+    # function that draws the depot
     def draw_zones(self, canvas):
-        # package_circle = canvas.create_oval(self.package[0] - self.package[2],
-        #                                  self.package[1] - self.package[2],
-        #                                  self.package[0] + self.package[2],
-        #                                  self.package[1] + self.package[2],
-        #                                  fill="green",
-        #                                  outline="")
         if self.depot_image != None:
             canvas.create_image(self.depot[0]/self.pixel_to_m, self.depot[1]/self.pixel_to_m, image=self.depot_image, anchor='center')
         else:
@@ -327,13 +244,7 @@ class Environment:
                                              fill="orange",
                                              outline="")
 
-    def get_best_bot_id(self):
-        best_bot_id = 0
-        for bot in self.population:
-            if 1 - abs(bot.noise_mu) > 1 - abs(self.population[best_bot_id].noise_mu):
-                best_bot_id = bot.id
-        return best_bot_id
-
+    # function that draws pending orders
     def draw_orders_locations(self, canvas):
 
         # Draw orders with packages in pending queue
@@ -361,67 +272,8 @@ class Environment:
                                                  robot.attempted_delivery.location[1]/self.pixel_to_m + 10,
                                                  fill="green",
                                                  outline="")
-
-    def draw_best_bot(self, canvas):
-        circle = canvas.create_oval(self.population[self.best_bot_id].pos[0] - 4,
-                                    self.population[self.best_bot_id].pos[1] - 4,
-                                    self.population[self.best_bot_id].pos[0] + 4,
-                                    self.population[self.best_bot_id].pos[1] + 4,
-                                    fill="red")
-
-    def get_robot_at(self, x, y):
-        selected = None
-        for bot in self.population:
-            if norm(bot.pos - np.array([x*self.pixel_to_m, y*self.pixel_to_m]).astype('float64')) < bot.radius():
-                selected = bot
-                break
-
-        return selected
-
-    @staticmethod
-    def create_spawn_dicts():
-        d = dict()
-        for location in Location:
-            d[location] = dict()
-        return d
-
-    def check_locations(self, robot):
-        if robot.carries_package():
-            if self.senses(robot, Location.DEPOT_LOCATION):
-                # Spawn deposit location if needed
-                if robot.id not in self.foraging_spawns[Location.DEPOT_LOCATION]:
-                    self.add_spawn(Location.DEPOT_LOCATION, robot)
-                # Check if robot can deposit package
-                if self.is_on_top_of_spawn(robot, Location.DEPOT_LOCATION):
-                    self.deposit_package(robot)
-        else:
-            if self.senses(robot, Location.DELIVERY_LOCATION):
-                # Spawn package if needed
-                if robot.id not in self.foraging_spawns[Location.DELIVERY_LOCATION]:
-                    self.add_spawn(Location.DELIVERY_LOCATION, robot)
-                # Check if robot can pickup package
-                if self.is_on_top_of_spawn(robot, Location.DELIVERY_LOCATION):
-                    self.pickup_package(robot)
-
-    # def add_spawn(self, location, robot):
-    #     rand_angle, rand_rad = random() * 360, np.sqrt(random()) * robot.locations[location][2]
-    #     pos_in_circle = rand_rad * np.array([cos(radians(rand_angle)), sin(radians(rand_angle))])
-    #     self.foraging_spawns[location][robot.id] = np.array([robot.locations[location][0],
-    #                                                          robot.locations[location][1]]) + pos_in_circle
-
-    # def deposit_package(self, robot):
-    #     robot.drop_package()
-    #     self.foraging_spawns[Location.DEPOT_LOCATION].pop(robot.id)
-
-    #     reward = self.market.sell_strawberry(robot.id)
-
-    #     self.payment_database.pay_reward(robot.id, reward=reward)
-    #     self.payment_database.pay_creditors(robot.id, total_reward=reward)
-
-    # def pickup_package(self, robot):
-    #     robot.pickup_package()
-    #     self.foraging_spawns[Location.DELIVERY_LOCATION].pop(robot.id)
     
+    #function to check orders being attempted at the moment
     def check_orders_being_attempted(self):
         if self.ongoing_attempts > 0:
             for robot in self.population:
