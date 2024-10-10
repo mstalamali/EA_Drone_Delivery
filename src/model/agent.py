@@ -410,28 +410,29 @@ class Agent:
 
     # function to draw robot destination (planned path)
     def draw_goal_vector(self, canvas, pixel_to_m):
-
         arrow = canvas.create_line(self.pos[0]/pixel_to_m,
                                    self.pos[1]/pixel_to_m,
                                    self.pos[0]/pixel_to_m + rotate(
-                                       self.behavior.navigation_table.get_relative_position_for_location(Location.DELIVERY_LOCATION)/pixel_to_m,
+                                       self.get_relative_position_to_location(Location.DELIVERY_LOCATION)/pixel_to_m,
                                        self.orientation)[0],
                                    self.pos[1]/pixel_to_m + rotate(
-                                       self.behavior.navigation_table.get_relative_position_for_location(Location.DELIVERY_LOCATION)/pixel_to_m,
+                                       self.get_relative_position_to_location(Location.DELIVERY_LOCATION)/pixel_to_m,
                                        self.orientation)[1],
                                    arrow=LAST,
-                                   fill="darkgreen")
+                                   fill="darkgreen",
+                                   width=2)
         
         arrow = canvas.create_line(self.pos[0]/pixel_to_m,
                                    self.pos[1]/pixel_to_m,
                                    self.pos[0]/pixel_to_m + rotate(
-                                       self.behavior.navigation_table.get_relative_position_for_location(Location.DEPOT_LOCATION)/pixel_to_m,
+                                       self.get_relative_position_to_location(Location.DEPOT_LOCATION)/pixel_to_m,
                                        self.orientation)[0],
                                    self.pos[1]/pixel_to_m + rotate(
-                                       self.behavior.navigation_table.get_relative_position_for_location(Location.DEPOT_LOCATION)/pixel_to_m,
+                                       self.get_relative_position_to_location(Location.DEPOT_LOCATION)/pixel_to_m,
                                        self.orientation)[1],
                                    arrow=LAST,
-                                   fill="darkorange")
+                                   fill="darkorange",
+                                   width=2)
 
     # function to draw robot orientation 
     def draw_orientation(self, canvas, pixel_to_m):

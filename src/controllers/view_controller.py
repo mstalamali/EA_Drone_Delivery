@@ -4,6 +4,8 @@ import time
 try:
     import tkinter as tk
     from PIL import Image, ImageTk
+    import pyautogui
+
 except ModuleNotFoundError:
     print("Tkinter not installed...")
 
@@ -13,11 +15,13 @@ except ModuleNotFoundError:
 
 class ViewController:
 
-    def __init__(self, controller, width=500, height=500, fps_cap=60, with_images=False):
+    def __init__(self, controller, width=500, height=500, fps_cap=60, with_images=False, save_frames = False, frame_saving_frequency = 1 ):
         self.controller = controller
         self.fps_cap = fps_cap
         self.fps = fps_cap
         self.fps_update_counter = 0
+        self.save_frames = save_frames
+        self.frame_saving_frequency = frame_saving_frequency
 
         self.root = tk.Tk()
         if with_images:
@@ -47,31 +51,31 @@ class ViewController:
 
     
     def start_animation(self):
+        capture_counter = 0
+
         while not self.animation_ended:
-            # Draw environment
-            if self.can_render:
-                self.last_frame_time = time.time()
-                self.fps_update_counter += 1
-                # Update environment
-                if not self.paused:
-                    self.controller.step()
-                    self.controller.check_end()
-                    self.animation_ended = not self.controller.experiment_running
 
-                self.refresh()
-                self.can_render = False
-
-            # Count elapsed time and schedule next update
-            if time.time() - self.last_frame_time >= 1.0 / self.fps_cap:
-                self.can_render = True
-
-            # Update FPS counter
-            if time.time() - self.last_fps_check_time >= 1:
-                self.fps = self.fps_update_counter
-                self.fps_update_counter = 0
-                self.last_fps_check_time = time.time()
-
+            self.controller.step()
+            self.controller.check_end()
+            self.animation_ended = not self.controller.experiment_running
+            self.refresh()
             self.root.update()
+
+
+            if self.save_frames and self.controller.clock.tick % self.frame_saving_frequency == 0 :
+
+                x = self.canvas.winfo_rootx()
+                y = self.canvas.winfo_rooty()
+                w = self.canvas.winfo_width()
+                h = self.canvas.winfo_height()
+                
+                # Capture the screen within the Tkinter window's dimensions
+                screenshot = pyautogui.screenshot(region=(x, y, w, h))
+                screenshot.save("screenshot_"+str(capture_counter)+".png")  # Save the screenshot
+
+                self.fps_update_counter += 1
+
+                capture_counter+=1
             
         self.controller.save_final_data()
 

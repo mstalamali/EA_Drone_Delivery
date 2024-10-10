@@ -14,7 +14,9 @@
   "visualization": {
     "activate": false,
     "fps": 60,
-    "graphics": false
+    "graphics": false,
+    "save_frames": false,
+    "frame_saving_frequency": 10
   },
   "random_walk": {
     "random_walk_factor": 0.9,

@@ -23,7 +23,9 @@ def main():
                                          config.value_of("width"),
                                          config.value_of("height"),
                                          config.value_of("visualization")['fps'],
-                                         config.value_of("visualization")['graphics'])
+                                         config.value_of("visualization")['graphics'],
+                                         config.value_of("visualization")['save_frames'],
+                                         config.value_of("visualization")['frame_saving_frequency'])
 
     # run simulation without visuation if this one is not activated in config file
     else:

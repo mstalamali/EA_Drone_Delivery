@@ -50,6 +50,7 @@ class Environment:
 
         self.current_order = 0
         self.current_order_advertised = False
+        self.next_order_ready = False
         self.last_order_advertisment_time = -self.order_params["times"]["order_processing_interval"]
 
         # test variables
@@ -98,53 +99,66 @@ class Environment:
 
 
         # 5. move  to the next package if no body bidded for the current
-        if len(self.pending_orders_list) > 0 or self.current_order_advertised:
+        if len(self.pending_orders_list) > 0:
 
-            if not self.current_order_advertised:
+            if self.current_order_advertised: # if current order advertised, I need to check if it was take, or skipped
 
-                if (self.clock.tick - self.last_order_advertisment_time) >= self.order_params["times"]["order_processing_interval"]:
-
-                    if self.pending_orders_list[self.current_order] != None or self.pending_orders_list.count(None)<len(self.pending_orders_list):
-                        
-                        while self.pending_orders_list[self.current_order] == None:
-                                self.current_order += 1
-
-                        self.last_order_advertisment_time = self.clock.tick
-                        self.advertise_next_order(self.pending_orders_list[self.current_order])
-                        # print(self.clock.tick,"advertising order:",self.pending_orders_list[self.current_order].id)
-                        self.current_order_advertised = True
-                
-            else:
-
-                if self.pending_orders_list[self.current_order] == None:
-                    # print(self.clock.tick,"previous advertised order taken!")
-
+                if self.pending_orders_list[self.current_order] == None: # order was taken 
                     self.current_order = 0
                     if self.pending_orders_list.count(None)<len(self.pending_orders_list):
                         while self.pending_orders_list[self.current_order] == None:
                             self.current_order += 1
 
-                    self.current_order_advertised = False
+                        self.next_order_ready = True
+
+                        self.advertise_next_order();
+                    else:
+                        self.current_order = 0
+                        self.next_order_ready = False
+                        self.current_order_advertised = False
+                    
+
                 elif self.no_bids() and self.any_UAV_in():
-                    # print(self.clock.tick,"no bids",self.no_bids())
-                    self.current_order += 1
 
-                    while self.current_order<len(self.pending_orders_list) and self.pending_orders_list[self.current_order] == None:
-                        self.current_order+=1
+                    if self.pending_orders_list.count(None)<len(self.pending_orders_list):
 
-                    if self.current_order>=len(self.pending_orders_list):
-                        self.current_order=0
-                        if self.pending_orders_list.count(None)<len(self.pending_orders_list):
+                        self.current_order += 1
+
+                        while self.current_order<len(self.pending_orders_list) and self.pending_orders_list[self.current_order] == None:
+                            self.current_order+=1
+
+                        if self.current_order>=len(self.pending_orders_list):
+                            self.current_order=0
                             while self.pending_orders_list[self.current_order] == None:
                                 self.current_order += 1
+                    
+                        self.next_order_ready = True
+                        self.advertise_next_order();
 
-                    self.current_order_advertised = False
+                    else:
+                        self.current_order = 0
+                        self.next_order_ready = False
+                        self.current_order_advertised = False
+            else:
 
-    # function implementing the advertisement of an order by the FC
-    def advertise_next_order(self,order):
-        for robot in self.population:
-            if robot.in_depot():
-                robot.receive_next_order(order)
+                if self.next_order_ready == True: # order ready but it was not advertised, try to advertise it again!
+                    self.advertise_next_order();
+                else:
+                    if self.pending_orders_list.count(None)<len(self.pending_orders_list):
+                        while self.current_order<len(self.pending_orders_list) and self.pending_orders_list[self.current_order] == None:
+                            self.current_order+=1
+
+                        self.next_order_ready = True
+                        self.advertise_next_order()
+
+    def advertise_next_order(self):
+        if (self.clock.tick - self.last_order_advertisment_time) >= self.order_params["times"]["order_processing_interval"] and self.any_UAV_in():
+            self.last_order_advertisment_time = self.clock.tick
+            self.current_order_advertised = True
+            # print(self.clock.tick, "adverising order",self.pending_orders_list[self.current_order].id)
+            for robot in self.population:
+                if robot.in_depot():
+                    robot.receive_next_order(self.pending_orders_list[self.current_order])
 
     # function for checking if there are UAVs in the FC (to know if there is no bids because no one is there or because UAVs are not bidding)
     def any_UAV_in(self):
