@@ -142,6 +142,7 @@ class Agent:
         if self.data_logging:
             self.logfile = open(f"{log_params[1]}/robot{str(self.id)}_{self.log_filename_suffix}","w")
 
+        self.state = State.WAITING
     
     # function for debugging during visualisation (by clicking on the robot these information are shown on the right side of the simulation)
     def __str__(self):
@@ -279,6 +280,9 @@ class Agent:
 
     # function to update robot state (charging state, in depot state, and bidding state)
     def update_state(self,state):
+
+        self.state = state
+
         if state == State.EVALUATING:
         # if state == State.WAITING or state == State.EVALUATING:
             self.comm_state = CommunicationState.OPEN
@@ -410,28 +414,27 @@ class Agent:
 
     # function to draw robot destination (planned path)
     def draw_goal_vector(self, canvas, pixel_to_m):
+
+        if self.state == State.ATTEMPTING:
+            Goal = Location.DELIVERY_LOCATION
+            color = "darkgreen"
+        else:
+            Goal = Location.DEPOT_LOCATION
+            if self._carries_package == True:
+                color = "darkorange"
+            else:
+                color = "darkgreen"
+
         arrow = canvas.create_line(self.pos[0]/pixel_to_m,
                                    self.pos[1]/pixel_to_m,
                                    self.pos[0]/pixel_to_m + rotate(
-                                       self.get_relative_position_to_location(Location.DELIVERY_LOCATION)/pixel_to_m,
+                                       self.get_relative_position_to_location(Goal)/pixel_to_m,
                                        self.orientation)[0],
                                    self.pos[1]/pixel_to_m + rotate(
-                                       self.get_relative_position_to_location(Location.DELIVERY_LOCATION)/pixel_to_m,
+                                       self.get_relative_position_to_location(Goal)/pixel_to_m,
                                        self.orientation)[1],
                                    arrow=LAST,
-                                   fill="darkgreen",
-                                   width=2)
-        
-        arrow = canvas.create_line(self.pos[0]/pixel_to_m,
-                                   self.pos[1]/pixel_to_m,
-                                   self.pos[0]/pixel_to_m + rotate(
-                                       self.get_relative_position_to_location(Location.DEPOT_LOCATION)/pixel_to_m,
-                                       self.orientation)[0],
-                                   self.pos[1]/pixel_to_m + rotate(
-                                       self.get_relative_position_to_location(Location.DEPOT_LOCATION)/pixel_to_m,
-                                       self.orientation)[1],
-                                   arrow=LAST,
-                                   fill="darkorange",
+                                   fill=color,
                                    width=2)
 
     # function to draw robot orientation 

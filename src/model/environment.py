@@ -101,7 +101,7 @@ class Environment:
         # 5. move  to the next package if no body bidded for the current
         if len(self.pending_orders_list) > 0:
 
-            if self.current_order_advertised: # if current order advertised, I need to check if it was take, or skipped
+            if self.current_order_advertised: # if current order advertised, I need to check if it was taken, or skipped
 
                 if self.pending_orders_list[self.current_order] == None: # order was taken 
                     self.current_order = 0
@@ -140,8 +140,7 @@ class Environment:
                         self.next_order_ready = False
                         self.current_order_advertised = False
             else:
-
-                if self.next_order_ready == True: # order ready but it was not advertised, try to advertise it again!
+                if self.next_order_ready: # order ready but it was not advertised, try to advertise it again!
                     self.advertise_next_order();
                 else:
                     if self.pending_orders_list.count(None)<len(self.pending_orders_list):
@@ -159,6 +158,8 @@ class Environment:
             for robot in self.population:
                 if robot.in_depot():
                     robot.receive_next_order(self.pending_orders_list[self.current_order])
+        else:
+            self.current_order_advertised = False
 
     # function for checking if there are UAVs in the FC (to know if there is no bids because no one is there or because UAVs are not bidding)
     def any_UAV_in(self):
