@@ -186,6 +186,8 @@ class Environment:
         order_id = 1
         while time <= self.simulation_steps:
             new_order = Order(self.width, self.height, self.depot, order_id, time, order_params)
+            if time < self.clock.tick:
+                new_order = None
             # print("new order arrived!",new_order.distance, new_order.location, new_order.weight)
             self.all_orders_list.append(new_order)
             time += expovariate(1.0/order_params["times"]["interval_between_orders_arrivals"])
@@ -195,11 +197,18 @@ class Environment:
 
     # function that implements order arrival as simulation progresses
     def update_pending_orders_list(self, order_params):
+        
         if len(self.all_orders_list)>0:
-            if self.clock.tick >= self.all_orders_list[0].arrival_time:
+            while self.all_orders_list[0] == None:
                 new_order = self.all_orders_list.popleft()
-                # print(self.clock.tick,"new order",new_order.id)
                 self.pending_orders_list.append(new_order)
+
+            if self.all_orders_list[0] != None:
+                if self.clock.tick >= self.all_orders_list[0].arrival_time:
+                    new_order = self.all_orders_list.popleft()
+
+                    print(self.clock.tick,"new order",new_order.id)
+                    self.pending_orders_list.append(new_order)
 
     # function that creates robot objects
     def create_robots(self, log_params, agent_params, behavior_params,order_params):

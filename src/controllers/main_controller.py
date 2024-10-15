@@ -35,7 +35,7 @@ class Configuration:
 # class that implement the clock
 class Clock:
     def __init__(self, config: Configuration):
-        self._tick = 0
+        self._tick = config.value_of("intial_step")
         self.transitory_period = 0
         if "transitory_period" in config:
             self.transitory_period = config.value_of("transitory_period")

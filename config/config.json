@@ -9,14 +9,15 @@
   },
   "evaluation_type": "continuous",
   "simulation_steps": 86400,
+  "intial_step":1000,
   "episodes_no": 10,
   "seed": 1992,
   "visualization": {
-    "activate": false,
+    "activate": true,
     "fps": 30,
-    "graphics": false,
+    "graphics": true,
     "save_frames": false,
-    "frame_saving_frequency": 10
+    "frame_saving_frequency": 100
   },
   "random_walk": {
     "random_walk_factor": 0.9,
@@ -61,7 +62,7 @@
         "scaler_type": "Standard",
         "bidding_strategy": "Weakest",
         "scaler_initialisation_method": "KnownMeanVariance",
-        "model_initialisation_method": "AssumptionFitting"
+        "model_initialisation_method": "FromExisting"
       }
     }
   ],
