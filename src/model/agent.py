@@ -99,12 +99,14 @@ class Agent:
                 reader = csv.DictReader(csvfile,delimiter='\t')
                 data=list(reader)
                 self.battery_health = float(data[self.id]['SoH'])
-                self.w=[float(data[self.id]['w0']),float(data[self.id]['w1']),float(data[self.id]['w2'])]
-                self.b=[float(data[self.id]['b'])]
-                behavior_params['parameters']['w']=self.w
-                behavior_params['parameters']['b']=self.b
-                # print(behavior_params)
-                # print(self.id,self.battery_health,self.w,self.b)
+
+                if 'w0' in data[self.id]:
+                    self.w=[float(data[self.id]['w0']),float(data[self.id]['w1']),float(data[self.id]['w2'])]
+                    self.b=[float(data[self.id]['b'])]
+                    behavior_params['parameters']['w']=self.w
+                    behavior_params['parameters']['b']=self.b
+                    # print(behavior_params)
+                    # print(self.id,self.battery_health,self.w,self.b)
             except FileNotFoundError:
                 print("Initialisation file not found!")
                 raise
