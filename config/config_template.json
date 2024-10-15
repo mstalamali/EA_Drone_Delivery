@@ -9,6 +9,7 @@
   },
   "evaluation_type": "EVAL_TYPE",
   "simulation_steps": TIME_STEPS,
+  "intial_step":INITIAL_STEP,
   "episodes_no": NO_EPISODES,
   "seed": SEED,
   "visualization": {
