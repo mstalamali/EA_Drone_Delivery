@@ -9,12 +9,15 @@
   },
   "evaluation_type": "EVAL_TYPE",
   "simulation_steps": TIME_STEPS,
+  "intial_step":INITIAL_STEP,
   "episodes_no": NO_EPISODES,
   "seed": SEED,
   "visualization": {
     "activate": false,
     "fps": 60,
-    "graphics": false
+    "graphics": false,
+    "save_frames": false,
+    "frame_saving_frequency": 10
   },
   "random_walk": {
     "random_walk_factor": 0.9,

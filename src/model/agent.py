@@ -78,8 +78,28 @@ class Agent:
         # Set battery-related variables
         # --> Initial Values
         self.theoritical_battery_capacity = theoritical_battery_capacity
-        self.battery_health = uniform(min_battery_health,max_battery_health)
-        # print(self.id,self.battery_health)
+
+        if self._clock.tick == 0:
+            self.battery_health = uniform(min_battery_health,max_battery_health)
+        else:
+            data_folder = log_params[2]
+            filename="robots_log_"+str(self._clock.tick)+"_"+log_params[3]
+
+            try:
+                import csv
+                csvfile=open(data_folder+"/"+filename)
+                reader = csv.DictReader(csvfile,delimiter='\t')
+                data=list(reader)
+                self.battery_health = float(data[self.id]['SoH'])
+                self.w=[float(data[self.id]['w0']),float(data[self.id]['w1']),float(data[self.id]['w2'])]
+                self.b=[float(data[self.id]['b'])]
+                behavior_params['parameters']['w']=self.w
+                behavior_params['parameters']['b']=self.b
+                # print(behavior_params)
+                # print(self.id,self.battery_health,self.w,self.b)
+            except FileNotFoundError:
+                print("Initialisation file not found!")
+                raise
 
         # self.battery_health = 1.0
         self.actual_battery_capacity = self.theoritical_battery_capacity*self.battery_health

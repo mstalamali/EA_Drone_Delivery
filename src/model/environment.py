@@ -51,6 +51,7 @@ class Environment:
 
         self.current_order = 0
         self.current_order_advertised = False
+        self.next_order_ready = False
         self.last_order_advertisment_time = -self.order_params["times"]["order_processing_interval"]
 
         # test variables
@@ -71,84 +72,95 @@ class Environment:
         self.depot_image = ImageTk.PhotoImage(file="../assets/warehouse.png")
 
     def step(self):
-        
-        # print(self.clock.tick)
 
-        # 2. Update orders' list
+        # 1. Update orders' list
         if self.evaluation_type == "continuous":
             self.update_pending_orders_list(self.order_params)
 
 
-        # 4. Execture robot step
+        # 2. Exectue robot step
         for robot in self.population:
             # self.check_locations(robot)
             robot.step()
 
 
-        # 1. compute neighbors
+        # 3. compute neighbors table
         pop_size = len(self.population)
         neighbors_table = [[] for i in range(pop_size)]
         for id1 in range(pop_size):
-            if self.population[id1].in_depot():
+            if self.population[id1].in_depot(): # if the robot is in depot it will have neighbours
                 for id2 in range(id1 + 1, pop_size):
-                    if self.population[id2].in_depot():
+                    if self.population[id2].in_depot(): # the robot's neighbours are all those that are in depot
                         neighbors_table[id1].append(self.population[id2])
                         neighbors_table[id2].append(self.population[id1])
-                        
-        # 3. communication
+
+        # 4. update robots communication
         for robot in self.population:
             robot.communicate(neighbors_table[robot.id])
 
 
-        # 4. move  to the next package if no body bidded for the current
-        if len(self.pending_orders_list) > 0 or self.current_order_advertised:
+        # 5. move  to the next package if no body bidded for the current
+        if len(self.pending_orders_list) > 0:
 
-            if not self.current_order_advertised:
+            if self.current_order_advertised: # if current order advertised, I need to check if it was taken, or skipped
 
-                if (self.clock.tick - self.last_order_advertisment_time) >= self.order_params["times"]["order_processing_interval"]:
-
-                    if self.pending_orders_list[self.current_order] != None or self.pending_orders_list.count(None)<len(self.pending_orders_list):
-                        
-                        while self.pending_orders_list[self.current_order] == None:
-                                self.current_order += 1
-
-                        self.last_order_advertisment_time = self.clock.tick
-                        self.advertise_next_order(self.pending_orders_list[self.current_order])
-                        # print(self.clock.tick,"advertising order:",self.pending_orders_list[self.current_order].id)
-                        self.current_order_advertised = True
-                
-            else:
-
-                if self.pending_orders_list[self.current_order] == None:
-                    # print(self.clock.tick,"previous advertised order taken!")
-
+                if self.pending_orders_list[self.current_order] == None: # order was taken
                     self.current_order = 0
                     if self.pending_orders_list.count(None)<len(self.pending_orders_list):
                         while self.pending_orders_list[self.current_order] == None:
                             self.current_order += 1
 
-                    self.current_order_advertised = False
+                        self.next_order_ready = True
+
+                        self.advertise_next_order();
+                    else:
+                        self.current_order = 0
+                        self.next_order_ready = False
+                        self.current_order_advertised = False
+
+
                 elif self.no_bids() and self.any_UAV_in():
-                    # print(self.clock.tick,"no bids",self.no_bids())
-                    self.current_order += 1
 
-                    while self.current_order<len(self.pending_orders_list) and self.pending_orders_list[self.current_order] == None:
-                        self.current_order+=1
+                    if self.pending_orders_list.count(None)<len(self.pending_orders_list):
 
-                    if self.current_order>=len(self.pending_orders_list):
-                        self.current_order=0
-                        if self.pending_orders_list.count(None)<len(self.pending_orders_list):
+                        self.current_order += 1
+
+                        while self.current_order<len(self.pending_orders_list) and self.pending_orders_list[self.current_order] == None:
+                            self.current_order+=1
+
+                        if self.current_order>=len(self.pending_orders_list):
+                            self.current_order=0
                             while self.pending_orders_list[self.current_order] == None:
                                 self.current_order += 1
 
-                    self.current_order_advertised = False
-                # else:
-                    # print(self.clock.tick,"bids", not self.no_bids())
+                        self.next_order_ready = True
+                        self.advertise_next_order();
 
-    def advertise_next_order(self,order):
-        for robot in self.population:
-            if robot.in_depot():
-                robot.receive_next_order(order)
+                    else:
+                        self.current_order = 0
+                        self.next_order_ready = False
+                        self.current_order_advertised = False
+            else:
+                if self.next_order_ready: # order ready but it was not advertised, try to advertise it again!
+                    self.advertise_next_order();
+                else:
+                    if self.pending_orders_list.count(None)<len(self.pending_orders_list):
+                        while self.current_order<len(self.pending_orders_list) and self.pending_orders_list[self.current_order] == None:
+                            self.current_order+=1
+
+                        self.next_order_ready = True
+                        self.advertise_next_order()
+
+    def advertise_next_order(self):
+        if (self.clock.tick - self.last_order_advertisment_time) >= self.order_params["times"]["order_processing_interval"] and self.any_UAV_in():
+            self.last_order_advertisment_time = self.clock.tick
+            self.current_order_advertised = True
+            # print(self.clock.tick, "adverising order",self.pending_orders_list[self.current_order].id)
+            for robot in self.population:
+                if robot.in_depot():
+                    robot.receive_next_order(self.pending_orders_list[self.current_order])
+        else:
+            self.current_order_advertised = False
 
     def any_UAV_in(self):
         for robot in self.population:
@@ -173,11 +185,14 @@ class Environment:
         #     print(self.pending_orders_list[i].fulfillment_time)
         #     print(self.pending_orders_list[i].bid_start_time)
 
+    # function run at the beggining to draw all orders that will arrive in the future
     def draw_all_orders(self, order_params):
         time = 0
         order_id = 1
         while time <= self.simulation_steps:
             new_order = Order(self.width, self.height, self.depot, order_id, time, order_params)
+            if time < self.clock.tick:
+                new_order = None
             # print("new order arrived!",new_order.distance, new_order.location, new_order.weight)
             self.all_orders_list.append(new_order)
             time += expovariate(1.0/order_params["times"]["interval_between_orders_arrivals"])
@@ -186,47 +201,20 @@ class Environment:
         print(f'Drawing all orders = {len(self.all_orders_list)}')
 
 
+    # function that implements order arrival as simulation progresses
     def update_pending_orders_list(self, order_params):
-        
-        # Orders arrival
+
         if len(self.all_orders_list)>0:
-            if self.clock.tick >= self.all_orders_list[0].arrival_time:
+            while self.all_orders_list[0] == None:
                 new_order = self.all_orders_list.popleft()
-                # print(self.clock.tick,"new order",new_order.id)
                 self.pending_orders_list.append(new_order)
 
-        # Check look ahead queue and remove orders that spent long time in the the look-ahead queue        
-        # i = 1
-        # while len(self.lookahead_list) > 1 and i < len(self.lookahead_list):
-        #     # print("********************* CHECKING",i)
-        #     if (self.clock.tick-self.lookahead_list[i].in_look_ahead) > order_params["timeout"]:
-        #         # print("********************* DELETING",self.lookahead_list[i].in_look_ahead)
-        #         self.failed_orders_list.append(self.lookahead_list[i])
-        #         del self.lookahead_list[i]
-        #         continue
-        #     i+=1
+            if self.all_orders_list[0] != None:
+                if self.clock.tick >= self.all_orders_list[0].arrival_time:
+                    new_order = self.all_orders_list.popleft()
 
-        # # Transfer packages from pending to look-ahead queue:
-        # while len(self.lookahead_list) < order_params["look_ahead_size"] and len(self.pending_orders_list)>0:
-        #     order = self.pending_orders_list.popleft()
-        #     order.in_look_ahead = float(self.clock.tick)
-        #     self.lookahead_list.append(order)
-
-
-
-        # Check the queue
-
-
-        # if self.order_test < 1:
-        #     self.pending_orders_list.append(Order(self.width, self.height, self.depot, {
-        #             "orders_arrival_probability": 0.01,
-        #             "interval_between_orders_arrivals": 500.0,
-        #             "min_distance": 8000,
-        #             "radius": 50,
-        #             "min_package_weight": 1,
-        #             "max_package_weight": 5
-        #           }))
-        #     self.order_test+=1
+                    print(self.clock.tick,"new order",new_order.id)
+                    self.pending_orders_list.append(new_order)
 
     def create_robots(self, log_params, agent_params, behavior_params,order_params):
         robot_id = 0

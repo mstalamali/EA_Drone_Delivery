@@ -318,9 +318,12 @@ class NaiveBehavior(Behavior):
             return True
 
 class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
-    def __init__(self, working_threshold = 50.0,initial_assumption = 1, exploration_probability = 0.001,initialisation = 0, data_augmentation=0,loss_function = "hinge",learning_rate='optimal', alpha = 0.0001, eta0 =0.01 , scaler_type="standard", bidding_strategy = 'weak_prioritisation', model_initialisation_method = "Assumption",scaler_initialisation_method='KnownMeanVariance', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
+    def __init__(self, working_threshold = 50.0,initial_assumption = 1, exploration_probability = 0.001,initialisation = 0, data_augmentation=0,\
+        loss_function = "hinge",learning_rate='optimal', alpha = 0.0001, eta0 =0.01 , scaler_type="standard", bidding_strategy = 'weak_prioritisation', \
+        model_initialisation_method = "AssumptionFitting",scaler_initialisation_method='KnownMeanVariance',w=[],b=[], min_distance= 500,max_distance=8000, min_package_weight=0.5, \
+        max_package_weight= 5.0):
         super(DecentralisedLearningBehavior_DistanceBids, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
-        
+
         self.epsilon = exploration_probability
 
         # Initialize the scaler and the online SVM classifier
@@ -412,16 +415,11 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
             self.sgd_clf.fit(X_scaled, self.y_assumption)
             self.initialised=True
 
-        elif model_initialisation_method == "CanDoEverything":
-            # initial_coef = np.zeros((1, 3)) #np.array([[1.0,10.0,20.0]])
-            # initial_intercept = np.zeros(1) #np.array([100.0])
-            # self.sgd_clf.coef_ = np.zeros((1, 3))
-            # self.sgd_clf.intercept_ = np.zeros(1)
-            self.sgd_clf.coef_ = np.array([[1.0,1.0,1.0]])
-            self.sgd_clf.intercept_ = np.array([20.0])
+        elif model_initialisation_method == "FromExisting":
+            self.sgd_clf.coef_ = np.array([w])
+            self.sgd_clf.intercept_ = np.array(b)
             self.sgd_clf.classes_ = np.array([0, 1])
             self.initialised=True
-            # self.sgd_clf.fit_status_ = 0
 
             
 

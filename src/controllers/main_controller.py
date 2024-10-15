@@ -8,7 +8,7 @@ from random import seed
 
 from model.navigation import Order
 
-
+# class to interact with jason config files
 class Configuration:
     def __init__(self, config_file):
         self._parameters = self.read_config(config_file)
@@ -32,9 +32,10 @@ class Configuration:
     def set(self, parameter, value):
         self._parameters[parameter] = value
 
+# class that implement the clock
 class Clock:
     def __init__(self, config: Configuration):
-        self._tick = 0
+        self._tick = config.value_of("intial_step")
         self.transitory_period = 0
         if "transitory_period" in config:
             self.transitory_period = config.value_of("transitory_period")
@@ -49,9 +50,10 @@ class Clock:
     def is_in_transitory(self):
         return self._tick < self.transitory_period
 
-
+# class that implements the controller (object that progresses simulation timesteps)
 class MainController:
 
+    # initialisation function, it sets the main controller's viriables and create an environment's object
     def __init__(self, config: Configuration):
         self.config = config
         
@@ -89,6 +91,7 @@ class MainController:
 
 
 
+    # function that runs one simulation time step
     def step(self):
         self.clock.step()
         self.environment.step()
@@ -96,13 +99,7 @@ class MainController:
             self.record_time_evolution_data()
             self.record_robot_learning_data()
 
-        # else:
-        #     print(len(self.environment.successful_orders_list),self.environment.failed_delivery_attempt)
-        #     if self.filename is not None or self.filename != "":
-        #         self.record_delivery_time_data()
-        #         self.time_evolution_file.close()
-
-
+    # function that checks weather the end of the simulation has been reached
     def check_end(self):
 
         if self.clock.tick == self.config.value_of("simulation_steps"):
@@ -119,6 +116,7 @@ class MainController:
                     self.environment.number_of_successes = 0
                     self.environment.create_episode_orders_list()
 
+    # function that save all necessary data that need to be saved at the final timestep
     def save_final_data(self):
         if self.filename is not None or self.filename != "":
             self.record_delivery_time_data()
@@ -140,7 +138,7 @@ class MainController:
                 if hasattr(robot, 'logfile'):
                     robot.logfile.close()
 
-
+    # function to start and run simulation (it keeps looping until the set number of simulation is reached)
     def start_simulation(self):
 
         while self.experiment_running:
@@ -149,18 +147,20 @@ class MainController:
 
         self.save_final_data()
 
+    # function to get robot at specific location
     def get_robot_at(self, x, y):
         return self.environment.get_robot_at(x, y)
 
+    # function to record  #delivered, #pending, #Failed_Attempts over time
     def record_time_evolution_data(self,end=False):
         if self.clock.tick % self.time_evolution_recording_interval == 0 or end:
             successful = len(self.environment.successful_orders_list)
-            # failed = len(self.environment.failed_orders_list)
             failed = self.environment.failed_delivery_attempts
             pending = len(self.environment.pending_orders_list) - self.environment.pending_orders_list.count(None) + self.environment.ongoing_attempts
             failed_attempts = self.environment.failed_delivery_attempts
             self.time_evolution_file.write(str(self.clock.tick)+'\t'+ str(successful)+'\t'+ str(pending)+'\t'+ str(failed)+'\t'+ str(failed_attempts)+'\n')
 
+    # function to record delivered orders data (this is done at the end and records all information about an orders: arrival time, distance, weight, number of attempts...)
     def record_delivery_time_data(self):
         delivery_times_file = open(self.output_directory + "/delivery_times_" + self.filename,"w")
         delivery_times_file.write("Arrived\tDistance\tWeight\tDelivered\tTook\tAttempted\n")
@@ -168,6 +168,7 @@ class MainController:
             delivery_times_file.write(str(order.arrival_time)+"\t"+str(order.distance)+"\t"+str(order.weight)+"\t"+str(order.fulfillment_time)+"\t"+str(order.fulfillment_time-order.arrival_time)+"\t"+str(order.attempted)+"\n")
         delivery_times_file.close()
 
+    # function to record pending orders data (this is done at the end and records all information about an orders: arrival time, distance, weight, number of attempts...)
     def record_pending_orders_data(self):
         pending_orders_file = open(self.output_directory + "/pending_orders_" + self.filename,"w")
         pending_orders_file.write("Arrived\tDistance\tWeight\tAttempted\n")
@@ -176,7 +177,7 @@ class MainController:
                 pending_orders_file.write(str(order.arrival_time)+"\t"+str(order.distance)+"\t"+str(order.weight)+"\t"+str(order.attempted)+"\n")
         pending_orders_file.close()
 
-
+    # function to record information about the robots (ID,SoC,SoH,#Delivered,#Attempted,Decision Plane)
     def record_robot_learning_data(self,end=False):
 
         if self.clock.tick % self.robot_learning_recording_interval == 0 or end:
@@ -207,6 +208,7 @@ class MainController:
 
             robots_log_file.close()
 
+    # function to record charge level over time (for every robot, at takeoff and return)
     def record_robot_charge_level_data(self):
         cherge_level_log_file = open(self.output_directory + "/charge_level_log_" + self.filename,"w")
         cherge_level_log_file.write("robot\ttime\tcharge_level\n")
@@ -217,43 +219,3 @@ class MainController:
                                         str(self.environment.charge_level_logging[i][2])+"\t"+\
                                         str(self.environment.charge_level_logging[i][3])+"\n")
         cherge_level_log_file.close()
-        
-
-#   Data retrieval functions
-
-    # def get_rewards_evolution(self):
-    #     return self.rewards_evolution
-
-    # def get_rewards_evolution_list(self):
-    #     return self.rewards_evolution_list
-
-    # def get_items_collected_stats(self):
-    #     res = ""
-    #     for bot in self.environment.population:
-    #         res += str(bot.items_collected) + ","
-    #     res = res[:-1]  # remove last comma
-    #     res += "\n"
-    #     return res
-
-    # def get_rewards(self):
-    #     return [bot.reward() for bot in self.environment.population]
-
-    # def get_items_collected(self):
-    #     return [bot.items_collected for bot in self.environment.population]
-
-    # def get_sorted_reward_stats(self):
-    #     sorted_bots = sorted([bot for bot in self.environment.population], key=lambda bot: abs(bot.noise_mu))
-    #     res = ""
-    #     for bot in sorted_bots:
-    #         res += str(bot.reward()) + ","
-    #     res = res[:-1]  # remove last comma
-    #     res += "\n"
-    #     return res
-
-    # def get_reward_stats(self):
-    #     res = ""
-    #     for bot in self.environment.population:
-    #         res += str(bot.reward()) + ","
-    #     res = res[:-1]  # remove last comma
-    #     res += "\n"
-    #     return res
