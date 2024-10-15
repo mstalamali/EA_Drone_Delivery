@@ -156,7 +156,7 @@ class MainController:
         if self.clock.tick % self.time_evolution_recording_interval == 0 or end:
             successful = len(self.environment.successful_orders_list)
             failed = self.environment.failed_delivery_attempts
-            pending = len(self.environment.pending_orders_list) - self.environment.pending_orders_list.count(None) + self.environment.ongoing_attempts
+            pending = len(self.environment.pending_orders_list) - self.environment.pending_orders_list.count(None) + self.environment.ongoing_attempts + self.environment.reserved_orders
             failed_attempts = self.environment.failed_delivery_attempts
             self.time_evolution_file.write(str(self.clock.tick)+'\t'+ str(successful)+'\t'+ str(pending)+'\t'+ str(failed)+'\t'+ str(failed_attempts)+'\n')
 

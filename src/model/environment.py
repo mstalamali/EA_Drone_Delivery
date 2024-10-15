@@ -33,6 +33,7 @@ class Environment:
         self.order_params = order_params       
         self.failed_delivery_attempts = 0
         self.ongoing_attempts = 0
+        self.reserved_orders = 0
         self.number_of_successes = 0        
         self.last_order_arrival = 0.0
         self.next_order_arrival = 0.0

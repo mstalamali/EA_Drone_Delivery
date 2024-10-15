@@ -379,6 +379,7 @@ class Agent:
     def reserve_package(self):
         self.attempted_delivery = self.next_order
         self.pending_orders_list[self.environment.current_order] = None
+        self.environment.reserved_orders += 1
 
     # def return_package(self):
     #     self._carries_package = False
@@ -419,6 +420,8 @@ class Agent:
         if self.attempted_delivery == None:
             self.attempted_delivery=self.next_order
             self.pending_orders_list[self.environment.current_order] = None
+        else:
+            self.environment.reserved_orders -= 1
 
         if self.environment.evaluation_type == "episodes":
             if order.arrival_time == float('inf'):
@@ -426,7 +429,8 @@ class Agent:
 
         self._carries_package = True
         # self.locations[Location.DELIVERY_LOCATION] = (order.location[0],order.location[1],self.speed())
-        self.locations[Location.DELIVERY_LOCATION] = (self.attempted_delivery.location[0],self.attempted_delivery.location[1],int(self.attempted_delivery.radius))
+        self.locations[Location.DELIVERY_LOCATION] = (self.attempted_delivery.location[0],self.attempted_delivery.location[1],int(self.attempted_delivery.radius))        
+
         self.environment.ongoing_attempts+=1
         self.log_charge("takeoff")
 
