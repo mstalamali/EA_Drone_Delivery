@@ -135,21 +135,19 @@ class NaiveBehavior(Behavior):
                         api.log_data(f"{api.clock().tick}\tbidding\t{state}\t{1}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
 
                 self.my_bid = self.formulate_bid(api.get_order(),api.get_battery_level())
-                # print("bid", self.id,self.my_bid,order.id) # <-----------------------------
+                # print("bid", self.id,self.my_bid,api.get_order().id) # <-----------------------------
                 api.make_bid(self.my_bid,None)
                 self.state = State.EVALUATING
 
             elif self.reservation_policy(state):
-                        
-                if api.is_time_to_start_reserving():
+                
+                self.my_reservation_bid = self.formulate_reservation_bid(api.get_order(),api.get_battery_level(),api.get_zero_to_handred_charging_time())
 
-                    self.my_reservation_bid = self.formulate_reservation_bid(api.get_order(),api.get_battery_level(),api.get_zero_to_handred_charging_time())
+                # print("reservation bid", api.get_order().id ,self.id,self.my_reservation_bid) # <-----------------------------
 
-                    # print("reservation bid", api.get_order().id ,self.id,self.my_reservation_bid) # <-----------------------------
+                api.make_bid(None,self.my_reservation_bid)
 
-                    api.make_bid(None,self.my_reservation_bid)
-
-                    self.state = State.EVALUATING
+                self.state = State.EVALUATING
             else:
                 self.state = State.WAITING
                 api.clear_next_order()
@@ -181,7 +179,7 @@ class NaiveBehavior(Behavior):
 
             elif self.my_reservation_bid!= None:
 
-                if api.get_order()!=None and self.evaluate_reservation_bids():
+                if api.get_order()!=None and len(self.bids[0]) == 0 and self.evaluate_reservation_bids():
 
                     api.reserve_package()
                     # print(self.id, "*********************** I won reservation bid! *************************",api.get_package_info().id)

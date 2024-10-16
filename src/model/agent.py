@@ -43,7 +43,6 @@ class AgentAPI:
         self.return_package = agent.return_package
         self.get_package_info = agent.get_package_info
         
-        self.is_time_to_start_reserving = agent.is_time_to_start_reserving
         self.get_zero_to_handred_charging_time = agent.get_zero_to_handred_charging_time
 
         # Logging function
@@ -201,7 +200,6 @@ class Agent:
 
     def step(self):
         # print("before", self.clock().tick,self.id,self.behavior.state, self.comm_state, self._bid)
-
         self.behavior.navigation_table = self.new_nav
         self.sensors = self.environment.get_sensors(self)
         self.behavior.step(AgentAPI(self))
@@ -550,10 +548,3 @@ class Agent:
     def log_charge(self,event_type):
         if self.charge_logging:
             self.charge_level_logging.append([self.id, self.clock().tick, event_type, self.get_battery_level()])
-
-
-    def is_time_to_start_reserving(self):
-        if self.clock().tick >= self.reservation_start_time:
-            return True
-        else:
-            return False

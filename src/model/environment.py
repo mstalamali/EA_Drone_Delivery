@@ -214,7 +214,7 @@ class Environment:
                 if self.clock.tick >= self.all_orders_list[0].arrival_time:
                     new_order = self.all_orders_list.popleft()
 
-                    print(self.clock.tick,"new order",new_order.id)
+                    # print(self.clock.tick,"new order",new_order.id)
                     self.pending_orders_list.append(new_order)
 
     def create_robots(self, log_params, agent_params, behavior_params,order_params):
