@@ -1,4 +1,4 @@
-# Multi-agent simulator for Energy-Aware UAV-based delivery.
+# Multi-agent Simulator for Energy-Aware UAV-based Delivery.
 
 This repository provides a **python-based multi-agent simulator** for studying **energy-aware uav-based delivery**.
 
