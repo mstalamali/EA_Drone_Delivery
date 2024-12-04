@@ -87,7 +87,7 @@ class MainController:
         
         if self.filename is not None and self.filename != "":
             self.time_evolution_file = open(self.output_directory + "/time_evolution_" + self.filename,"w")
-            self.time_evolution_file.write("Time(s)\tDelivered\tPending\tFailed\tFailed Attempts\n")
+            self.time_evolution_file.write("Time(s)\tDelivered\tPending\tFailed\tFailed Attempts\tLost UAVs\n")
 
 
 
@@ -158,7 +158,8 @@ class MainController:
             failed = self.environment.failed_delivery_attempts
             pending = len(self.environment.pending_orders_list) - self.environment.pending_orders_list.count(None) + self.environment.ongoing_attempts
             failed_attempts = self.environment.failed_delivery_attempts
-            self.time_evolution_file.write(str(self.clock.tick)+'\t'+ str(successful)+'\t'+ str(pending)+'\t'+ str(failed)+'\t'+ str(failed_attempts)+'\n')
+            lost_uavs=self.environment.lost_uavs
+            self.time_evolution_file.write(str(self.clock.tick)+'\t'+ str(successful)+'\t'+ str(pending)+'\t'+ str(failed)+'\t'+ str(failed_attempts)+ '\t' + str(lost_uavs)+'\n')
 
     # function to record delivered orders data (this is done at the end and records all information about an orders: arrival time, distance, weight, number of attempts...)
     def record_delivery_time_data(self):

@@ -41,26 +41,28 @@
       "class": "NaiveBehavior",
       "population_size": S_NAIVE,
       "parameters": {
-        "working_threshold": WORKING_THRESH 
+      "working_threshold": WORKING_THRESH,
+      "xi": XI
       }
     },
     {
       "class": "DecentralisedLearningBehavior_DistanceBids",
       "population_size": S_DECENTRALISED_LEARNING_DISTANCE,
       "parameters": {
-        "working_threshold": WORKING_THRESH,
-        "initial_assumption": INITIAL_ASSUMPTION,
-        "exploration_probability": EXPLORATION_PROBABILITY,
-        "initialisation": INIT_PTS,
-        "data_augmentation": DATA_AUGMENTATION_PTS,
-        "loss_function": "LOSS_FUNCTION",
-        "learning_rate": "LEARNING_RATE",
-        "alpha": ALPHA,
-        "eta0": ETA0,
-        "scaler_type": "SCALER_TYPE",
-        "bidding_strategy": "BIDDING_STRATEGY",
-        "scaler_initialisation_method": "SCALER_INIT_METHOD",
-        "model_initialisation_method": "MODEL_INIT_METHOD"
+      "working_threshold": WORKING_THRESH,
+      "xi": XI,
+      "initial_assumption": INITIAL_ASSUMPTION,
+      "exploration_probability": EXPLORATION_PROBABILITY,
+      "initialisation": INIT_PTS,
+      "data_augmentation": DATA_AUGMENTATION_PTS,
+      "loss_function": "LOSS_FUNCTION",
+      "learning_rate": "LEARNING_RATE",
+      "alpha": ALPHA,
+      "eta0": ETA0,
+      "scaler_type": "SCALER_TYPE",
+      "bidding_strategy": "BIDDING_STRATEGY",
+      "scaler_initialisation_method": "SCALER_INIT_METHOD",
+      "model_initialisation_method": "MODEL_INIT_METHOD"
       }
     }
   ],

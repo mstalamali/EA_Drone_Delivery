@@ -41,6 +41,7 @@ class AgentAPI:
         self.deliver_package = agent.deliver_package
         self.return_package = agent.return_package
         self.get_package_info = agent.get_package_info
+        self.got_lost = agent.got_lost
 
         # Logging function
         self.log_data = agent.log_data
@@ -49,7 +50,7 @@ class AgentAPI:
 # Robot class
 class Agent:
     colors = {State.EVALUATING: "orange", State.WAITING: "red", State.DECIDING: "green",\
-                State.ATTEMPTING: "cyan", State.RETURNING: "magenta"}
+                State.ATTEMPTING: "cyan", State.RETURNING: "magenta", State.RETURNING: "magenta", State.LOST:"gray"}
 
     def __init__(self, robot_id, x, y, environment, log_params, behavior_params,order_params, clock, speed, radius, frame_weight, battery_weight,
                  theoritical_battery_capacity, min_battery_health, max_battery_health, noise_sampling_mu, noise_sampling_sigma, noise_sd, fuel_cost,
@@ -463,3 +464,5 @@ class Agent:
             self.charge_level_logging.append([self.id, self.clock().tick, event_type, self.get_battery_level()])
 
 
+    def got_lost(self):
+        self.environment.lost_uavs+=1

@@ -41,7 +41,8 @@
       "class": "NaiveBehavior",
       "population_size": 0,
       "parameters": {
-        "working_threshold": 50.0
+        "working_threshold": 50.0,
+        "xi": 0.5
       }
     },
 
@@ -50,6 +51,7 @@
       "population_size": 25,
       "parameters": {
         "working_threshold": 50.0,
+        "xi": 0.5,
         "initial_assumption": 1,
         "exploration_probability": 0.0,
         "initialisation": 0,
