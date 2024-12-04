@@ -18,6 +18,7 @@ class State(Enum):
     EVALUATING = 3
     ATTEMPTING = 4
     RETURNING = 5
+    LOST = 6
 
 # function that create robot behaviour depending on the chosen strategy
 def behavior_factory(behavior_params,order_params):
@@ -49,7 +50,7 @@ class Behavior(ABC):
 class NaiveBehavior(Behavior):
 
     # init function for setting controller relatex variables
-    def __init__(self,working_threshold = 60.0, min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
+    def __init__(self,working_threshold = 60.0,xi=0.5, min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
         super().__init__()
         self.state = State.WAITING
         self.dr = np.array([0, 0]).astype('float64')
@@ -62,6 +63,7 @@ class NaiveBehavior(Behavior):
         self.max_weight = max_package_weight
         self.working_threshold = working_threshold
         self.delivery_outcome = 0
+        self.xi = xi
     
     # function that runs one timestep of the controller    
     def step(self, api):
@@ -96,7 +98,7 @@ class NaiveBehavior(Behavior):
                 self.delivery_outcome = 1
                 self.state = State.RETURNING
 
-            elif api.get_battery_level() <= self.takeoff_battery_level/2.0:
+            elif api.get_battery_level() <= self.xi * self.takeoff_battery_level:
                 self.state = State.RETURNING
                 self.delivery_outcome = 0
 
@@ -106,14 +108,20 @@ class NaiveBehavior(Behavior):
                     if hasattr(self.sgd_clf, 'coef_'):
                         # api.log_data(api.clock().tick,"learning",[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level],0,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
                         api.log_data(f"{api.clock().tick}\tlearning\t{[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level]}\t{0}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
+            
+            elif api.get_battery_level() <= 0.0:
+                self.state = State.LOST
+                api.got_lost()
 
-        
         elif self.state == State.RETURNING:
             
             if sensors[Location.DEPOT_LOCATION]:
                 if self.delivery_outcome ==0:
                     api.return_package()
                 self.state = State.WAITING
+            elif api.get_battery_level() <= 0.0:
+                self.state = State.LOST
+                api.got_lost()
 
         elif self.state == State.WAITING:
             order = api.get_order()
@@ -239,8 +247,8 @@ class NaiveBehavior(Behavior):
 # class that implements the learning based approach (it inherits the baseline approach as both are auction based)
 class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
     
-    def __init__(self, working_threshold = 50.0,initial_assumption = 1, exploration_probability = 0.001,initialisation = 0, data_augmentation=0,loss_function = "hinge",learning_rate='optimal', alpha = 0.0001, eta0 =0.01 , scaler_type="standard", bidding_strategy = 'weak_prioritisation', model_initialisation_method = "Assumption",scaler_initialisation_method='KnownMeanVariance', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
-        super(DecentralisedLearningBehavior_DistanceBids, self).__init__(working_threshold,min_distance,max_distance, min_package_weight, max_package_weight)
+    def __init__(self, working_threshold = 50.0,xi=0.5,initial_assumption = 1, exploration_probability = 0.001,initialisation = 0, data_augmentation=0,loss_function = "hinge",learning_rate='optimal', alpha = 0.0001, eta0 =0.01 , scaler_type="standard", bidding_strategy = 'weak_prioritisation', model_initialisation_method = "Assumption",scaler_initialisation_method='KnownMeanVariance', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
+        super(DecentralisedLearningBehavior_DistanceBids, self).__init__(working_threshold,xi,min_distance,max_distance, min_package_weight, max_package_weight)
         
         self.epsilon = exploration_probability
 

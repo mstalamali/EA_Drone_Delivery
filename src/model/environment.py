@@ -38,7 +38,8 @@ class Environment:
         self.next_order_arrival = 0.0
         self.evaluation_type=evaluation_type
         self.simulation_steps = simulation_steps
-        self.charge_level_logging = [] 
+        self.charge_level_logging = []
+        self.lost_uavs = 0 
 
         if evaluation_type == "episodes": #other option is "continuous":
             self.create_episode_orders_list()
