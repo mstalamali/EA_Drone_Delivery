@@ -1,0 +1,9 @@
+num_events: 9
+num_supervisors: 1
+events: [ EV_lostBid,EV_notCapableTask,EV_notCondReturn,EV_condReturn,EV_capableTask,EV_bid,EV_deliver,EV_wonBid,EV_return ]
+ev_controllable: [ 0,0,0,0,0,1,1,0,1 ]
+sup_events: [ [ 1,1,1,1,1,1,1,1,1 ] ]
+sup_init_state: [ 0 ]
+sup_current_state: [ 0 ]
+sup_data_pos: [ 0 ]
+sup_data: [ 6,EV_lostBid,0,0,EV_notCapableTask,0,0,EV_notCondReturn,0,0,EV_condReturn,0,0,EV_capableTask,0,1,EV_wonBid,0,0,7,EV_lostBid,0,1,EV_notCapableTask,0,0,EV_notCondReturn,0,1,EV_condReturn,0,1,EV_capableTask,0,1,EV_bid,0,2,EV_wonBid,0,1,6,EV_lostBid,0,0,EV_notCapableTask,0,2,EV_notCondReturn,0,2,EV_condReturn,0,2,EV_capableTask,0,2,EV_wonBid,0,3,7,EV_lostBid,0,3,EV_notCapableTask,0,3,EV_notCondReturn,0,3,EV_condReturn,0,3,EV_capableTask,0,3,EV_deliver,0,4,EV_wonBid,0,3,6,EV_lostBid,0,4,EV_notCapableTask,0,4,EV_notCondReturn,0,4,EV_condReturn,0,5,EV_capableTask,0,4,EV_wonBid,0,4,7,EV_lostBid,0,5,EV_notCapableTask,0,5,EV_notCondReturn,0,4,EV_condReturn,0,5,EV_capableTask,0,5,EV_wonBid,0,5,EV_return,0,0 ]
