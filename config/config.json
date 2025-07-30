@@ -10,12 +10,12 @@
   "evaluation_type": "continuous",
   "simulation_steps": 86400,
   "episodes_no": 10,
-  "seed": 1992,
+  "seed": 2025,
   "visualization": {
-    "activate": false,
+    "activate": true,
     "fps": 30,
-    "graphics": false,
-    "save_frames": false,
+    "graphics": true,
+    "save_frames": true,
     "frame_saving_frequency": 10
   },
   "random_walk": {
@@ -50,7 +50,7 @@
       "class": "DecentralisedLearningBehavior_DistanceBids",
       "population_size": 25,
       "parameters": {
-        "working_threshold": 50.0,
+        "working_threshold": 0.0,
         "xi": 0.5,
         "initial_assumption": 1,
         "exploration_probability": 0.0,
@@ -72,13 +72,13 @@
     "times":{
       "orders_per_episode": 10,
       "orders_arrival_probability": 0.01,
-      "interval_between_orders_arrivals": 900,
+      "interval_between_orders_arrivals": 300,
       "order_processing_interval": 2
     },
 
     "distances":{
-      "min_distance": 500,
-      "max_distance": 8000
+      "min_distance": 1000,
+      "max_distance": 6000
     },
     "weights":{
     "min_package_weight": 0.5,
