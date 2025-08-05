@@ -29,7 +29,7 @@
     "battery_weight": 10,
     "theoritical_battery_capacity": 800,
     "max_battery_degradation": MAX_BATTERY_DEGRADATION,
-    "n_r_nominal": N_R_NOMINAL,
+    "number_of_rotors": NUMBER_OF_ROTORS,
     "max_propeller_degradation": MAX_PROPELLER_DEGRADATION,
     "min_initial_battery_level": MIN_INITIAL_BATTERY_LEVEL
   },

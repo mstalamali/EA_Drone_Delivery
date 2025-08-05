@@ -53,7 +53,7 @@ class Agent:
                 State.ATTEMPTING: "cyan", State.RETURNING: "magenta", State.RETURNING: "magenta", State.LOST:"gray"}
 
     def __init__(self, robot_id, x, y, environment, log_params, behavior_params,order_params, clock, speed, radius, frame_weight, battery_weight,
-                 theoritical_battery_capacity, max_battery_degradation, theoritical_number_of_rotors, max_propeller_degradation, min_initial_battery_level):
+                 theoritical_battery_capacity, max_battery_degradation, number_of_rotors, max_propeller_degradation, min_initial_battery_level):
         
         self._clock = clock
         self.environment = environment
@@ -117,7 +117,7 @@ class Agent:
         # Simulation constants
         # --> UAV energy model constants
         self.g = 9.81 # Gravity constant (kg/s^2)
-        self.n_r_nominal = theoritical_number_of_rotors  # Nominal number of rotors
+        self.n_r_nominal = number_of_rotors  # Nominal number of rotors
         self.propeller_degradation_factor = uniform(1.0 - max_propeller_degradation, 1.0)  # Propeller degradation factor
         # Add propeller degradation noise
         self.n_r = self.n_r_nominal * uniform(1.0 - max_propeller_degradation, 1.0)  # Effective number of rotors

@@ -29,9 +29,14 @@
     "battery_weight": 10,
     "theoritical_battery_capacity": 800,
     "max_battery_degradation": 0.0,
-    "theoritical_number_of_rotors": 8,
+    "number_of_rotors": 8,
     "max_propeller_degradation": 0.0,
-    "min_initial_battery_level": 0.0
+    "min_initial_battery_level": 0.0,
+    "communication_radius": 50,
+    "noise_sampling_mu": 0.0,
+    "noise_sampling_sigma": 0.0,
+    "noise_sd": 0.0,
+    "fuel_cost": 0
   },
   "behaviors": [
     {
