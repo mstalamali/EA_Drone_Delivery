@@ -118,9 +118,9 @@ class Agent:
         # --> UAV energy model constants
         self.g = 9.81 # Gravity constant (kg/s^2)
         self.n_r_nominal = number_of_rotors  # Nominal number of rotors
-        self.propeller_degradation_factor = uniform(1.0 - max_propeller_degradation, 1.0)  # Propeller degradation factor
-        # Add propeller degradation noise
-        self.n_r = self.n_r_nominal * uniform(1.0 - max_propeller_degradation, 1.0)  # Effective number of rotors
+        # Apply propeller degradation - ensure minimum of 1 rotor remains functional
+        degradation_factor = uniform(1.0 - max_propeller_degradation, 1.0)
+        self.n_r = max(1.0, self.n_r_nominal * degradation_factor)  # Effective number of rotors
 
         self.rho = 1.2250 # Air density at 15 deg (kg/m^3)
         self.zeta = 0.27 # Area of the spinning blade disc of one rotor (m^2)
