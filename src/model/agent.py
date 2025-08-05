@@ -53,8 +53,7 @@ class Agent:
                 State.ATTEMPTING: "cyan", State.RETURNING: "magenta", State.RETURNING: "magenta", State.LOST:"gray"}
 
     def __init__(self, robot_id, x, y, environment, log_params, behavior_params,order_params, clock, speed, radius, frame_weight, battery_weight,
-                 theoritical_battery_capacity, min_battery_health, max_battery_health, noise_sampling_mu, noise_sampling_sigma, noise_sd, fuel_cost,
-                 communication_radius):
+                 theoritical_battery_capacity, max_battery_degradation, theoritical_number_of_rotors, max_propeller_degradation, min_initial_battery_level):
         
         self._clock = clock
         self.environment = environment
@@ -83,13 +82,12 @@ class Agent:
         # Set battery-related variables
         # --> Initial Values
         self.theoritical_battery_capacity = theoritical_battery_capacity
-        self.battery_health = uniform(min_battery_health,max_battery_health)
-
+        self.battery_health = uniform(1.0 - max_battery_degradation, 1.0)
         self.actual_battery_capacity = self.theoritical_battery_capacity*self.battery_health
 
         # --> Time varying values 
-        self.current_battery_capacity = self.actual_battery_capacity
-        self._battery_level = 100.0
+        self._battery_level = uniform(min_initial_battery_level, 100.0)  # Configurable initial battery level
+        self.current_battery_capacity = self.actual_battery_capacity * (self._battery_level / 100.0)  # Match capacity to level
 
         # Locations of interest
         self.locations = {Location.DELIVERY_LOCATION: tuple(), Location.DEPOT_LOCATION: environment.depot}
@@ -106,18 +104,11 @@ class Agent:
         self.next_order = None
 
         # Communication variables
-        self.communication_radius = communication_radius
         self.comm_state = CommunicationState.CLOSED
 
 
         # Currently not used
         self.orientation = random() * 360  # 360 degree angle
-        self.noise_mu = gauss(noise_sampling_mu, noise_sampling_sigma)
-        if random() >= 0.5:
-            self.noise_mu = -self.noise_mu
-        self.noise_sd = noise_sd
-        self.fuel_cost = fuel_cost
-        self.levi_counter = 1
 
         # --> robot's controller variables
         self.behavior = behavior_factory(behavior_params,order_params) # robot controller
@@ -126,7 +117,11 @@ class Agent:
         # Simulation constants
         # --> UAV energy model constants
         self.g = 9.81 # Gravity constant (kg/s^2)
-        self.n_r = 8  # Number of rotors
+        self.n_r_nominal = theoritical_number_of_rotors  # Nominal number of rotors
+        self.propeller_degradation_factor = uniform(1.0 - max_propeller_degradation, 1.0)  # Propeller degradation factor
+        # Add propeller degradation noise
+        self.n_r = self.n_r_nominal * uniform(1.0 - max_propeller_degradation, 1.0)  # Effective number of rotors
+
         self.rho = 1.2250 # Air density at 15 deg (kg/m^3)
         self.zeta = 0.27 # Area of the spinning blade disc of one rotor (m^2)
         #--> Battery charger constants

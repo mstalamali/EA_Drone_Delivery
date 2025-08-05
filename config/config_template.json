@@ -28,13 +28,10 @@
     "frame_weight": 10,
     "battery_weight": 10,
     "theoritical_battery_capacity": 800,
-    "min_battery_health": MIN_BH,
-    "max_battery_health": MAX_BH,
-    "communication_radius": 50,
-    "noise_sampling_mu": 0.0,
-    "noise_sampling_sigma": 0.0,
-    "noise_sd": 0.0,
-    "fuel_cost": 0
+    "max_battery_degradation": MAX_BATTERY_DEGRADATION,
+    "n_r_nominal": N_R_NOMINAL,
+    "max_propeller_degradation": MAX_PROPELLER_DEGRADATION,
+    "min_initial_battery_level": MIN_INITIAL_BATTERY_LEVEL
   },
   "behaviors": [
     {

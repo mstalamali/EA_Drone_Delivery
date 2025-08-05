@@ -15,7 +15,7 @@
     "activate": true,
     "fps": 30,
     "graphics": true,
-    "save_frames": true,
+    "save_frames": false,
     "frame_saving_frequency": 10
   },
   "random_walk": {
@@ -28,13 +28,10 @@
     "frame_weight": 10,
     "battery_weight": 10,
     "theoritical_battery_capacity": 800,
-    "min_battery_health": 0.5,
-    "max_battery_health": 1.0,
-    "communication_radius": 50,
-    "noise_sampling_mu": 0.0,
-    "noise_sampling_sigma": 0.0,
-    "noise_sd": 0.0,
-    "fuel_cost": 0
+    "max_battery_degradation": 0.0,
+    "theoritical_number_of_rotors": 8,
+    "max_propeller_degradation": 0.0,
+    "min_initial_battery_level": 0.0
   },
   "behaviors": [
     {
