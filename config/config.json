@@ -47,7 +47,6 @@
         "xi": 0.5
       }
     },
-
     {
       "class": "DecentralisedLearningBehavior_DistanceBids",
       "population_size": 25,
