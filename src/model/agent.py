@@ -30,6 +30,7 @@ class AgentAPI:
         self.get_relative_position_to_location = agent.get_relative_position_to_location
         self.get_battery_level = agent.get_battery_level
         self.get_order = agent.get_order
+        self.get_environmental_conditions = agent.get_environmental_conditions
 
         self.update_state = agent.update_state
         self.make_bid=agent.set_bid
@@ -57,6 +58,7 @@ class Agent:
         
         self._clock = clock
         self.environment = environment
+        self.environmental_factors_enabled = environment.enable_environmental_factors
 
         # Robot variables
         self.id = robot_id
@@ -144,14 +146,16 @@ class Agent:
     def __str__(self):
         return f"ID: {self.id}\n" \
          f"state: {self.behavior.state}\n" \
-         f"communication state: {self.comm_state.name}\n" \
          f"delivery location: ({round(self.pos[0] + rotate(self.behavior.navigation_table.get_relative_position_for_location(Location.DELIVERY_LOCATION), self.orientation)[0])}, {round(self.pos[1] + rotate(self.behavior.navigation_table.get_relative_position_for_location(Location.DELIVERY_LOCATION), self.orientation)[1])}), \n" \
-         f"depot at: ({round(self.pos[0] + rotate(self.behavior.navigation_table.get_relative_position_for_location(Location.DEPOT_LOCATION), self.orientation)[0])}, {round(self.pos[1] + rotate(self.behavior.navigation_table.get_relative_position_for_location(Location.DEPOT_LOCATION), self.orientation)[1])}), \n" \
          f"carries package: {self._carries_package}\n" \
          f"battery health: {round(self.battery_health, 5)}\n" \
+         f"propeller degradation: {round(self.propeller_degradation_factor, 5)}\n" \
+         f"battery level: {round(self._battery_level, 2)}%\n" \
          f"item delivered: {self.items_delivered}\n" \
          f"dr: {np.round(self.dr, 2)}\n" \
          f"{self.behavior.debug_text()}"
+        #  f"depot at: ({round(self.pos[0] + rotate(self.behavior.navigation_table.get_relative_position_for_location(Location.DEPOT_LOCATION), self.orientation)[0])}, {round(self.pos[1] + rotate(self.behavior.navigation_table.get_relative_position_for_location(Location.DEPOT_LOCATION), self.orientation)[1])}), \n" \
+        #  f"communication state: {self.comm_state.name}\n" \
 
 
     # functions for comparing objects (not used at the moment)
@@ -258,12 +262,68 @@ class Agent:
             if self.carries_package():
                 total_weight += self.attempted_delivery.weight
 
-            self.current_battery_capacity-= pow(self.g*total_weight,1.5)/pow(2*self.n_r*self.rho*self.zeta,0.5)/3600
+            if self.environmental_factors_enabled:
+                # Get current wind conditions
+                wind_speed, wind_direction_meteorological = self.get_environmental_conditions()
+                
+                # Convert wind direction from meteorological to mathematical convention
+                # Meteorological: 0° = North, clockwise (0°=N, 90°=E, 180°=S, 270°=W)
+                # Mathematical: 0° = East, counter-clockwise (0°=E, 90°=N, 180°=W, 270°=S)
+                # Conversion: math_angle = (90 - met_angle) % 360
+                wind_direction_math = (90 - wind_direction_meteorological) % 360
+                
+                # Calculate wind vector components (where wind is coming from)
+                wind_angle_rad = radians(wind_direction_math)
+                v_wind = np.array([wind_speed * cos(wind_angle_rad), wind_speed * sin(wind_angle_rad)])
+                
+                # Calculate UAV velocity vector using the same logic as goal arrow
+                # Determine goal direction based on robot state (same as draw_goal_vector)
+                if self.state == State.ATTEMPTING:
+                    Goal = Location.DELIVERY_LOCATION
+                else:
+                    Goal = Location.DEPOT_LOCATION
+                
+                # Get relative position to goal (same calculation as arrow visualization)
+                relative_position = self.get_relative_position_to_location(Goal)
+                
+                # Calculate UAV direction toward goal
+                relative_position_norm = np.linalg.norm(relative_position)
+                if relative_position_norm > 0:
+                    # Normalize to get unit direction vector toward goal
+                    uav_unit_vector = relative_position / relative_position_norm
+                else:
+                    # If at goal or no goal, no wind effect
+                    uav_unit_vector = np.array([0, 0])
+                
+                v_uav_vect = self._speed * uav_unit_vector
+                
+                # Calculate airspeed vector: v_air_vect = v_uav_vect - v_wind
+                v_air_vect = v_uav_vect - v_wind
+                
+                # Calculate airspeed magnitude
+                v_air = np.linalg.norm(v_air_vect)
+                
+            else:
+                v_air = self._speed
+
+            Epm = pow(self.g*total_weight,1.5)/ ( v_air * pow(2*self.n_r*self.rho*self.zeta,0.5) ) #Energy consumed per meter in Joul
+            Eps = Epm * self._speed # Energy consumed per second in Joule
+            self.current_battery_capacity -= Eps / 3600.0  # Convert to Wh           
             self._battery_level = np.round(self.current_battery_capacity/self.actual_battery_capacity*100.0,1)
 
     # function to get robot's state of charge
     def get_battery_level(self):
         return self._battery_level
+
+    # function to get current environmental conditions (wind speed and direction)
+    def get_environmental_conditions(self):
+        """
+        Get current environmental conditions from the environment.
+        Returns: (wind_speed, wind_direction) tuple
+        - wind_speed: Current wind speed in m/s
+        - wind_direction: Current wind direction in degrees (meteorological convention: 0° = North, clockwise)
+        """
+        return self.environment.get_wind_conditions()
 
 # ------> State related functions
     # function to check if the robot is charging

@@ -72,7 +72,8 @@ class MainController:
                                        clock=self.clock,
                                        simulation_steps =self.config.value_of("simulation_steps"),
                                        agent_params=self.config.value_of("agent"),
-                                       behavior_params=self.config.value_of("behaviors"))
+                                       behavior_params=self.config.value_of("behaviors"),
+                                       environment_params=self.config.value_of("environment"))
         
         if self.config.value_of("evaluation_type") == "episodes":
             self.number_of_episodes = config.value_of("episodes_no")

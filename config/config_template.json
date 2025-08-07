@@ -22,6 +22,11 @@
     "random_walk_factor": 0.9,
     "levi_factor": 1.4
   },
+  "environment": {
+    "enable_environmental_factors": ENABLE_ENVIRONMENTAL_FACTORS,
+    "max_wind_speed": MAX_WIND_SPEED,
+    "wind_change_interval": WIND_CHANGE_INTERVAL
+  },
   "agent": {
     "radius": 80,
     "speed": SPEED,

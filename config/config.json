@@ -22,6 +22,11 @@
     "random_walk_factor": 0.9,
     "levi_factor": 1.4
   },
+  "environment": {
+    "enable_environmental_factors": false,
+    "max_wind_speed": 5.0,
+    "wind_change_interval": 3600
+  },
   "agent": {
     "radius": 80,
     "speed": 10,
@@ -31,12 +36,7 @@
     "max_battery_degradation": 0.0,
     "number_of_rotors": 8,
     "max_propeller_degradation": 0.0,
-    "min_initial_battery_level": 0.0,
-    "communication_radius": 50,
-    "noise_sampling_mu": 0.0,
-    "noise_sampling_sigma": 0.0,
-    "noise_sd": 0.0,
-    "fuel_cost": 0
+    "min_initial_battery_level": 0.0
   },
   "behaviors": [
     {

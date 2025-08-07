@@ -17,6 +17,12 @@ class Order:
 
         self.location = [ depot[0] + self.distance * np.cos(theta) , depot[1] + self.distance * np.sin(theta) ] 
 
+        # Calculate direction from depot to delivery location in meteorological convention
+        # theta is in mathematical convention (0° = East, counterclockwise)
+        # Meteorological convention: 0° = North, 90° = East, 180° = South, 270° = West (clockwise)
+        # Convert from mathematical to meteorological: direction = (90 - theta_degrees) % 360
+        self.direction = (90 - np.degrees(theta)) % 360
+
         self.weight = uniform(order_params["weights"]["min_package_weight"], order_params["weights"]["max_package_weight"])
 
         self.radius = order_params["radius"]
