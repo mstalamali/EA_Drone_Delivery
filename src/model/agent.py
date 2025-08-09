@@ -31,6 +31,7 @@ class AgentAPI:
         self.get_battery_level = agent.get_battery_level
         self.get_order = agent.get_order
         self.get_environmental_conditions = agent.get_environmental_conditions
+        self.environmental_conditions_enabled = agent.environmental_conditions_enabled
 
         self.update_state = agent.update_state
         self.make_bid=agent.set_bid
@@ -53,7 +54,7 @@ class Agent:
     colors = {State.EVALUATING: "orange", State.WAITING: "red", State.DECIDING: "green",\
                 State.ATTEMPTING: "cyan", State.RETURNING: "magenta", State.RETURNING: "magenta", State.LOST:"gray"}
 
-    def __init__(self, robot_id, x, y, environment, log_params, behavior_params,order_params, clock, speed, radius, frame_weight, battery_weight,
+    def __init__(self, robot_id, x, y, environment, log_params, behavior_params,order_params,environment_params, clock, speed, radius, frame_weight, battery_weight,
                  theoritical_battery_capacity, max_battery_degradation, number_of_rotors, max_propeller_degradation, min_initial_battery_level):
         
         self._clock = clock
@@ -113,7 +114,7 @@ class Agent:
         self.orientation = random() * 360  # 360 degree angle
 
         # --> robot's controller variables
-        self.behavior = behavior_factory(behavior_params,order_params) # robot controller
+        self.behavior = behavior_factory(behavior_params,order_params,environment_params) # robot controller
         self.api = AgentAPI(self) # robot API
 
         # Simulation constants
@@ -324,6 +325,14 @@ class Agent:
         - wind_direction: Current wind direction in degrees (meteorological convention: 0° = North, clockwise)
         """
         return self.environment.get_wind_conditions()
+
+    # function to check if environmental factors are enabled
+    def environmental_conditions_enabled(self):
+        """
+        Check if environmental factors (wind conditions) are enabled in the simulation.
+        Returns: bool - True if environmental factors are enabled, False otherwise
+        """
+        return self.environmental_factors_enabled
 
 # ------> State related functions
     # function to check if the robot is charging

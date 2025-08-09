@@ -23,7 +23,7 @@
     "levi_factor": 1.4
   },
   "environment": {
-    "enable_environmental_factors": false,
+    "enable_environmental_factors": true,
     "max_wind_speed": 5.0,
     "wind_change_interval": 3600
   },

@@ -21,9 +21,9 @@ class State(Enum):
     LOST = 6
 
 # function that create robot behaviour depending on the chosen strategy
-def behavior_factory(behavior_params,order_params):
+def behavior_factory(behavior_params,order_params,environment_params):
     # if behavior_params['class'] == "DecentralisedLearningBehavior":
-    behavior = eval(behavior_params['class'])(**behavior_params['parameters'],**order_params['distances'],**order_params['weights'])
+    behavior = eval(behavior_params['class'])(**behavior_params['parameters'],**order_params['distances'],**order_params['weights'],**environment_params)    
     # else:
         # behavior = eval(behavior_params['class'])(**behavior_params['parameters'])
     return behavior
@@ -56,6 +56,8 @@ class NaiveBehavior(Behavior):
         self.dr = np.array([0, 0]).astype('float64')
         self.id = -1
         self.takeoff_battery_level = 100.0
+        self.takeoff_wind_speed = 0.0
+        self.takeoff_angle_diff = 0.0
         self.best_bid = None
         self.my_bid = None
         self.max_difficulty = 1.0
@@ -88,11 +90,18 @@ class NaiveBehavior(Behavior):
         if self.state == State.ATTEMPTING:            
             if sensors[Location.DELIVERY_LOCATION]:
 
-                self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level], 1)
+                # TODO TODO WE NEED TO USE THE DIFFERENT BETWEEN THE DIRECTION AND WIND SPEED INSTEAD OF USING TWO VARIABLES
+                if self.environmental_factors_enabled:
+                    self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level, self.takeoff_wind_speed, self.takeoff_angle_diff], 1)
+                else:
+                    self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level], 1)
                 
                 if hasattr(self, 'sgd_clf'): # learning log
                     if hasattr(self.sgd_clf, 'coef_'):
-                        api.log_data(f"{api.clock().tick}\tlearning\t{[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level]}\t{1}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
+                        if self.environmental_factors_enabled:
+                            api.log_data(f"{api.clock().tick}\tlearning\t{[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level,self.takeoff_wind_speed,self.takeoff_angle_diff]}\t{1}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
+                        else:
+                            api.log_data(f"{api.clock().tick}\tlearning\t{[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level]}\t{1}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
 
                 api.deliver_package()
                 self.delivery_outcome = 1
@@ -102,13 +111,19 @@ class NaiveBehavior(Behavior):
                 self.state = State.RETURNING
                 self.delivery_outcome = 0
 
-                self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level], 0)
-                
+                # TODO:
+                if self.environmental_factors_enabled:
+                    self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level, self.takeoff_wind_speed, self.takeoff_angle_diff], 0)
+                else:
+                    self.learn([api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level], 0)     
+
                 if hasattr(self, 'sgd_clf'): 
                     if hasattr(self.sgd_clf, 'coef_'):
-                        # api.log_data(api.clock().tick,"learning",[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level],0,self.sgd_clf.coef_[0,0],self.sgd_clf.coef_[0,1],self.sgd_clf.coef_[0,2],self.sgd_clf.intercept_[0])
-                        api.log_data(f"{api.clock().tick}\tlearning\t{[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level]}\t{0}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
-            
+                        if self.environmental_factors_enabled:
+                            api.log_data(f"{api.clock().tick}\tlearning\t{[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level,self.takeoff_wind_speed,self.takeoff_angle_diff]}\t{1}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
+                        else:
+                            api.log_data(f"{api.clock().tick}\tlearning\t{[api.get_package_info().distance,api.get_package_info().weight,self.takeoff_battery_level]}\t{0}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
+
             elif api.get_battery_level() <= 0.0:
                 self.state = State.LOST
                 api.got_lost()
@@ -131,14 +146,21 @@ class NaiveBehavior(Behavior):
 
         elif self.state == State.DECIDING:
             # ------------> communicate bid: id, current battery level, number of fails? maybe we should consider the order arrival time
-            state = [api.get_order().distance,api.get_order().weight,api.get_battery_level()]
-            
+            if self.environmental_factors_enabled:
+                angle_diff = abs(api.get_order().direction - api.get_environmental_conditions()[1])
+                if angle_diff > 180:
+                    angle_diff = 360 - angle_diff
+                state = [api.get_order().distance,api.get_order().weight,api.get_battery_level(),api.get_environmental_conditions()[0],angle_diff]
+            else:
+                state = [api.get_order().distance,api.get_order().weight,api.get_battery_level()]
+
             if self.bidding_policy(state):
                 if hasattr(self, 'sgd_clf'): 
                     if hasattr(self.sgd_clf, 'coef_'):
                         api.log_data(f"{api.clock().tick}\tbidding\t{state}\t{1}\t{self.sgd_clf.coef_[0,0]}\t{self.sgd_clf.coef_[0,1]}\t{self.sgd_clf.coef_[0,2]}\t{self.sgd_clf.intercept_[0]}\n")
 
-                self.my_bid = self.formulate_bid(api.get_order(),api.get_battery_level())
+                self.my_bid = self.formulate_bid(state)
+
                 # print("bid", self.id,self.my_bid,order.id) # <-----------------------------
                 api.make_bid(self.my_bid)
                 self.state = State.EVALUATING
@@ -167,7 +189,12 @@ class NaiveBehavior(Behavior):
                 self.state = State.ATTEMPTING
 
                 self.takeoff_battery_level = api.get_battery_level()
-            
+
+                if self.environmental_factors_enabled:
+                    self.takeoff_wind_speed, wind_direction = api.get_environmental_conditions()
+                    self.takeoff_angle_diff = abs(api.get_order().direction - wind_direction)
+                    if self.takeoff_angle_diff > 180:
+                        self.takeoff_angle_diff = 360 - self.takeoff_angle_diff
             else:
                 self.state = State.WAITING
 
@@ -212,8 +239,8 @@ class NaiveBehavior(Behavior):
             return False
 
     # function for deciding whether to bid or not  (for the baseline approach a robot bids it's charge level)
-    def formulate_bid(self,order,battery_level):
-        return battery_level
+    def formulate_bid(self,state):
+        return state[2]
 
     # function used by the robot to evaluate other bids (for the baseline approach is to check which bid is the highest)
     def evaluate_bids(self,attempted):
@@ -246,8 +273,8 @@ class NaiveBehavior(Behavior):
 
 # class that implements the learning based approach (it inherits the baseline approach as both are auction based)
 class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
-    
-    def __init__(self, working_threshold = 50.0,xi=0.5,initial_assumption = 1, exploration_probability = 0.001,initialisation = 0, data_augmentation=0,loss_function = "hinge",learning_rate='optimal', alpha = 0.0001, eta0 =0.01 , scaler_type="standard", bidding_strategy = 'weak_prioritisation', model_initialisation_method = "Assumption",scaler_initialisation_method='KnownMeanVariance', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
+
+    def __init__(self, working_threshold = 50.0,xi=0.5,initial_assumption = 1, exploration_probability = 0.001,initialisation = 0, data_augmentation=0,loss_function = "hinge",learning_rate='optimal', alpha = 0.0001, eta0 =0.01 , scaler_type="standard", bidding_strategy = 'weak_prioritisation', model_initialisation_method = "Assumption",scaler_initialisation_method='KnownMeanVariance', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0, enable_environmental_factors = False,max_wind_speed = 10.0,wind_change_interval=3600.0):
         super(DecentralisedLearningBehavior_DistanceBids, self).__init__(working_threshold,xi,min_distance,max_distance, min_package_weight, max_package_weight)
         
         self.epsilon = exploration_probability
@@ -276,17 +303,29 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
         self.max_package_weight = max_package_weight
         self.min_charge = working_threshold
         self.max_charge = 100.0
+        self.environmental_factors_enabled = enable_environmental_factors
+        self.wind_change_interval = wind_change_interval
+        self.max_wind_speed = max_wind_speed
 
         #ALL PREVIOUS RESULTS
         if initial_assumption == 1:
             # print("using first assumption")
-            self.X_assumption = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
-            self.y_assumption = [1,0]
+            if self.environmental_factors_enabled:
+                self.X_assumption = [[min_distance,min_package_weight,100.0,0.0,0.0],[max_distance,max_package_weight,0.0,max_wind_speed,180.0]]
+                self.y_assumption = [1,0]
+            else:  
+                self.X_assumption = [[min_distance,min_package_weight,100.0],[max_distance,max_package_weight,0.0]]
+                self.y_assumption = [1,0]
 
         elif initial_assumption == 2:
             # print("using second assumption")
-            self.X_assumption = [[min_distance,min_package_weight,100.0],[min_distance,min_package_weight,0.0]]
-            self.y_assumption = [1,0]
+            if self.environmental_factors_enabled:
+                self.X_assumption = [[min_distance,min_package_weight,100.0,0.0,0.0],[min_distance,min_package_weight,0.0,max_wind_speed,180.0]]
+                self.y_assumption = [1,0]
+            else:
+                self.X_assumption = [[min_distance,min_package_weight,100.0],[min_distance,min_package_weight,0.0]]
+                self.y_assumption = [1,0]
+        
 
         # NEW ASSUMPTION 2
         # self.X_assumption = [[max_distance,max_package_weight,100.0],[min_distance,min_package_weight,0.0]]
@@ -307,11 +346,19 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
         if scaler_initialisation_method == "KnownMeanVariance":
 
             if scaler_type == "Standard":
-                self.scaler.mean_= [(min_distance+max_distance)/2.0,(min_package_weight+max_package_weight)/2.0,(100.0+working_threshold)/2.0]
-                self.scaler_mean = self.scaler.mean_
 
-                self.scaler.variance_= [(max_distance-min_distance)*(max_distance-min_distance)/12.0,(max_package_weight-min_package_weight)*(max_package_weight-min_package_weight)/12.0,(100.0-working_threshold)*(100.0-working_threshold)/12.0]
-                
+                if self.environmental_factors_enabled:
+                    self.scaler.mean_ = [(min_distance+max_distance)/2.0,(min_package_weight+max_package_weight)/2.0,(100.0+working_threshold)/2.0,max_wind_speed/2.0,90.0]
+                    self.scaler_mean = self.scaler.mean_
+
+                    self.scaler.variance_ = [(max_distance-min_distance)*(max_distance-min_distance)/12.0,(max_package_weight-min_package_weight)*(max_package_weight-min_package_weight)/12.0,(100.0-working_threshold)*(100.0-working_threshold)/12.0, (max_wind_speed*max_wind_speed)/12.0, (180*180)/12.0]
+                    
+                else:
+                    self.scaler.mean_= [(min_distance+max_distance)/2.0,(min_package_weight+max_package_weight)/2.0,(100.0+working_threshold)/2.0]
+                    self.scaler_mean = self.scaler.mean_
+
+                    self.scaler.variance_= [(max_distance-min_distance)*(max_distance-min_distance)/12.0,(max_package_weight-min_package_weight)*(max_package_weight-min_package_weight)/12.0,(100.0-working_threshold)*(100.0-working_threshold)/12.0]
+                    
 
                 self.scaler.scale_ = np.sqrt(self.scaler.variance_)
                 self.scaler_std = self.scaler.scale_
@@ -319,10 +366,17 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
                 # print(self.scaler.mean_)
                 # print(self.scaler.scale_)
             elif scaler_type == "MinMax":
-                self.scaler.data_min_ = [min_distance,min_package_weight,working_threshold]
-                self.scaler.data_max_ = [max_distance,max_package_weight,100.0]
-                self.scaler.min_ = [-min_distance/(max_distance-min_distance), -min_package_weight/(max_package_weight-min_package_weight), -working_threshold/(100.0-working_threshold) ]
-                self.scaler.scale_ = [1.0/(max_distance-min_distance),1.0/(max_package_weight-min_package_weight),1.0/(100.0-working_threshold)]
+
+                if self.environmental_factors_enabled:
+                    self.scaler.data_min_ = [min_distance,min_package_weight,working_threshold,0.0,0.0]
+                    self.scaler.data_max_ = [max_distance,max_package_weight,100.0,max_wind_speed,180.0]
+                    self.scaler.min_ = [-min_distance/(max_distance-min_distance), -min_package_weight/(max_package_weight-min_package_weight), -working_threshold/(100.0-working_threshold), 0.0, 0.0]
+                    self.scaler.scale_ = [1.0/(max_distance-min_distance),1.0/(max_package_weight-min_package_weight),1.0/(100.0-working_threshold),1.0/max_wind_speed,1.0/180.0]
+                else:
+                    self.scaler.data_min_ = [min_distance,min_package_weight,working_threshold]
+                    self.scaler.data_max_ = [max_distance,max_package_weight,100.0]
+                    self.scaler.min_ = [-min_distance/(max_distance-min_distance), -min_package_weight/(max_package_weight-min_package_weight), -working_threshold/(100.0-working_threshold) ]
+                    self.scaler.scale_ = [1.0/(max_distance-min_distance),1.0/(max_package_weight-min_package_weight),1.0/(100.0-working_threshold)]
 
         elif scaler_initialisation_method == "AssumptionMeanVariance":
             self.scaler.fit(self.X_assumption)
@@ -334,10 +388,16 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
             self.initialised=True
 
         elif model_initialisation_method == "CanDoEverything":
-            self.sgd_clf.coef_ = np.array([[1.0,1.0,1.0]])
-            self.sgd_clf.intercept_ = np.array([20.0])
-            self.sgd_clf.classes_ = np.array([0, 1])
-            self.initialised=True
+            if self.environmental_factors_enabled:
+                self.sgd_clf.coef_ = np.array([[1.0,1.0,1.0,1.0,1.0]])
+                self.sgd_clf.intercept_ = np.array([20.0])
+                self.sgd_clf.classes_ = np.array([0, 1])
+                self.initialised=True
+            else:
+                self.sgd_clf.coef_ = np.array([[1.0,1.0,1.0]])
+                self.sgd_clf.intercept_ = np.array([20.0])
+                self.sgd_clf.classes_ = np.array([0, 1])
+                self.initialised=True
 
             
     # one controller step (only difference from the one above is logging)
@@ -368,10 +428,8 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
 
 
     # function to formulate bid based on confidence
-    def formulate_bid(self,order,battery_level):
+    def formulate_bid(self,state):
         if self.initialised:
-            state = [order.distance,order.weight,battery_level]
-
             state_scaled = self.transform(state)
 
             raw_distance = self.decision_function(state_scaled)
@@ -386,7 +444,7 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
                 return normalised_distance
 
         else:
-            return battery_level
+            return state[2]  # If not initialised, return the state of charge
 
     # function to update the robot's policy based on experience (outcome of delivery attempts)
     def learn(self,state, outcome):
@@ -474,11 +532,17 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
 
     # function used to preprocess data (using a strandard scaler)
     def transform(self,state):
-        return [(state[0]-self.scaler_mean[0])/self.scaler_std[0], (state[1]-self.scaler_mean[1])/self.scaler_std[1], (state[2]-self.scaler_mean[2])/self.scaler_std[2]]
+        if self.environmental_factors_enabled:
+            return [(state[0]-self.scaler_mean[0])/self.scaler_std[0], (state[1]-self.scaler_mean[1])/self.scaler_std[1], (state[2]-self.scaler_mean[2])/self.scaler_std[2], (state[3]-self.scaler_mean[3])/self.scaler_std[3], (state[4]-self.scaler_mean[4])/self.scaler_std[4]]
+        else:
+            return [(state[0]-self.scaler_mean[0])/self.scaler_std[0], (state[1]-self.scaler_mean[1])/self.scaler_std[1], (state[2]-self.scaler_mean[2])/self.scaler_std[2]]
 
     # function used to compute the decision function F(x)
     def decision_function(self,state):
-        return self.sgd_clf.coef_[0,0] * state[0] + self.sgd_clf.coef_[0,1] * state[1] +  self.sgd_clf.coef_[0,2] * state[2] + self.sgd_clf.intercept_[0]      
+        if self.environmental_factors_enabled:
+            return self.sgd_clf.coef_[0,0] * state[0] + self.sgd_clf.coef_[0,1] * state[1] + self.sgd_clf.coef_[0,2] * state[2] + self.sgd_clf.coef_[0,3] * state[3] + self.sgd_clf.coef_[0,4] * state[4] + self.sgd_clf.intercept_[0]
+        else:
+            return self.sgd_clf.coef_[0,0] * state[0] + self.sgd_clf.coef_[0,1] * state[1] +  self.sgd_clf.coef_[0,2] * state[2] + self.sgd_clf.intercept_[0]      
 
     # function used to make predicion based on decision function
     def predict(self,state):

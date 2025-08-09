@@ -82,7 +82,7 @@ class Environment:
         self.next_order_ready = False
         self.last_order_advertisment_time = -self.order_params["times"]["order_processing_interval"]
 
-        self.create_robots(log_params,agent_params, behavior_params,order_params)
+        self.create_robots(log_params,agent_params, behavior_params,order_params,environment_params)
 
         # test variables
         self.order_test = 0
@@ -306,7 +306,7 @@ class Environment:
                 self.pending_orders_list.append(new_order)
 
     # function that creates robot objects
-    def create_robots(self, log_params, agent_params, behavior_params,order_params):
+    def create_robots(self, log_params, agent_params, behavior_params,order_params,environment_params):
         robot_id = 0
         for behavior_params in behavior_params:
             for _ in range(behavior_params['population_size']):
@@ -319,6 +319,7 @@ class Environment:
                               log_params=log_params,
                               behavior_params=behavior_params,
                               order_params=order_params,
+                              environment_params=environment_params,
                               clock=self.clock,
                               **agent_params)
                 robot_id += 1

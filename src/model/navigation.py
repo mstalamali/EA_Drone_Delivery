@@ -11,6 +11,7 @@ class Location(Enum):
 # Class defining an order
 class Order:
     def __init__(self, env_width, env_height, depot, order_id, arrival_time ,order_params):
+        
         self.distance = np.sqrt(uniform(order_params["distances"]["min_distance"]*order_params["distances"]["min_distance"],order_params["distances"]["max_distance"]*order_params["distances"]["max_distance"]))
 
         theta = uniform(0, 2 * np.pi)
