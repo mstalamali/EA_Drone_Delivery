@@ -89,6 +89,9 @@ class MainController:
         if self.filename is not None and self.filename != "":
             self.time_evolution_file = open(self.output_directory + "/time_evolution_" + self.filename,"w")
             self.time_evolution_file.write("Time(s)\tDelivered\tPending\tFailed\tFailed Attempts\tLost UAVs\n")
+        
+        # Ensure robot learning data is recorded at tick 0
+        self.record_robot_learning_data()
 
 
 

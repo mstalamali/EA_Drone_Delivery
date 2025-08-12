@@ -350,13 +350,10 @@ class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
                 if self.environmental_factors_enabled:
                     self.scaler.mean_ = [(min_distance+max_distance)/2.0,(min_package_weight+max_package_weight)/2.0,(100.0+working_threshold)/2.0,max_wind_speed/2.0,90.0]
                     self.scaler_mean = self.scaler.mean_
-
                     self.scaler.variance_ = [(max_distance-min_distance)*(max_distance-min_distance)/12.0,(max_package_weight-min_package_weight)*(max_package_weight-min_package_weight)/12.0,(100.0-working_threshold)*(100.0-working_threshold)/12.0, (max_wind_speed*max_wind_speed)/12.0, (180*180)/12.0]
-                    
                 else:
                     self.scaler.mean_= [(min_distance+max_distance)/2.0,(min_package_weight+max_package_weight)/2.0,(100.0+working_threshold)/2.0]
                     self.scaler_mean = self.scaler.mean_
-
                     self.scaler.variance_= [(max_distance-min_distance)*(max_distance-min_distance)/12.0,(max_package_weight-min_package_weight)*(max_package_weight-min_package_weight)/12.0,(100.0-working_threshold)*(100.0-working_threshold)/12.0]
                     
 
