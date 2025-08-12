@@ -49,8 +49,8 @@ class Behavior(ABC):
 # Fixed waiting behaviour (skeleton of the auction based controller)
 class NaiveBehavior(Behavior):
 
-    # init function for setting controller relatex variables
-    def __init__(self,working_threshold = 60.0,xi=0.5, min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0):
+    # init function for setting controller related variables
+    def __init__(self,working_threshold = 60.0,xi=0.5, min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0, enable_environmental_factors=True, max_wind_speed=5.0, wind_change_interval=3600):
         super().__init__()
         self.state = State.WAITING
         self.dr = np.array([0, 0]).astype('float64')
@@ -275,7 +275,7 @@ class NaiveBehavior(Behavior):
 class DecentralisedLearningBehavior_DistanceBids(NaiveBehavior):
 
     def __init__(self, working_threshold = 50.0,xi=0.5,initial_assumption = 1, exploration_probability = 0.001,initialisation = 0, data_augmentation=0,loss_function = "hinge",learning_rate='optimal', alpha = 0.0001, eta0 =0.01 , scaler_type="standard", bidding_strategy = 'weak_prioritisation', model_initialisation_method = "Assumption",scaler_initialisation_method='KnownMeanVariance', min_distance= 500,max_distance=8000, min_package_weight=0.5, max_package_weight= 5.0, enable_environmental_factors = False,max_wind_speed = 10.0,wind_change_interval=3600.0):
-        super(DecentralisedLearningBehavior_DistanceBids, self).__init__(working_threshold,xi,min_distance,max_distance, min_package_weight, max_package_weight)
+        super(DecentralisedLearningBehavior_DistanceBids, self).__init__(working_threshold,xi,min_distance,max_distance, min_package_weight, max_package_weight , enable_environmental_factors,max_wind_speed,wind_change_interval)
         
         self.epsilon = exploration_probability
 
