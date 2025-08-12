@@ -66,6 +66,7 @@ class NaiveBehavior(Behavior):
         self.working_threshold = working_threshold
         self.delivery_outcome = 0
         self.xi = xi
+        self.environmental_factors_enabled = enable_environmental_factors
     
     # function that runs one timestep of the controller    
     def step(self, api):
