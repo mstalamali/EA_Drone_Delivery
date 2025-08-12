@@ -29,7 +29,7 @@
   },
   "agent": {
     "radius": 80,
-    "speed": SPEED,
+    "speed": UAV_SPEED,
     "frame_weight": 10,
     "battery_weight": 10,
     "theoritical_battery_capacity": 800,
