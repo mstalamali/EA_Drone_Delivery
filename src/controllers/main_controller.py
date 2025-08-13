@@ -205,10 +205,18 @@ class MainController:
                                       str(robot.failed_deliveries))
 
                 if hasattr(robot.behavior, 'sgd_clf'):
-                    robots_log_file.write("\t"+str(robot.behavior.sgd_clf.coef_[0,0])+"\t"+\
-                                               str(robot.behavior.sgd_clf.coef_[0,1])+"\t"+\
-                                               str(robot.behavior.sgd_clf.coef_[0,2])+"\t"+\
-                                               str(robot.behavior.sgd_clf.intercept_[0]))
+                    if self.environment.enable_environmental_factors:
+                        robots_log_file.write("\t"+str(robot.behavior.sgd_clf.coef_[0,0])+"\t"+\
+                            str(robot.behavior.sgd_clf.coef_[0,1])+"\t"+\
+                            str(robot.behavior.sgd_clf.coef_[0,2])+"\t"+\
+                            str(robot.behavior.sgd_clf.coef_[0,3])+"\t"+\
+                            str(robot.behavior.sgd_clf.coef_[0,4])+"\t"+\
+                            str(robot.behavior.sgd_clf.intercept_[0]))
+                    else:
+                        robots_log_file.write("\t"+str(robot.behavior.sgd_clf.coef_[0,0])+"\t"+\
+                                                str(robot.behavior.sgd_clf.coef_[0,1])+"\t"+\
+                                                str(robot.behavior.sgd_clf.coef_[0,2])+"\t"+\
+                                                str(robot.behavior.sgd_clf.intercept_[0]))
 
                 robots_log_file.write("\n")
 
