@@ -190,7 +190,10 @@ class MainController:
             robots_log_file = open(self.output_directory + "/robots_log_" + str(self.clock.tick)+ "_" + self.filename ,"w")
 
             if hasattr(self.environment.population[0].behavior, 'sgd_clf'):
-                robots_log_file.write("id\tSoC\tSoH\tPropeller Degradation\tDelivered\tFailed\tw0\tw1\tw2\tb\n")
+                if self.environment.enable_environmental_factors:
+                    robots_log_file.write("id\tSoC\tSoH\tPropeller Degradation\tDelivered\tFailed\tw0\tw1\tw2\tw3\tw4\tb\n")
+                else:
+                    robots_log_file.write("id\tSoC\tSoH\tPropeller Degradation\tDelivered\tFailed\tw0\tw1\tw2\tb\n")
             else:
                 robots_log_file.write("id\tSoC\tSoH\tPropeller Degradation\tDelivered\tFailed\n")
 
