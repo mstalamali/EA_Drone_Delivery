@@ -275,7 +275,7 @@ class Agent:
                 
                 # Calculate wind vector components (where wind is coming from)
                 wind_angle_rad = radians(wind_direction_math)
-                v_wind = np.array([wind_speed * cos(wind_angle_rad), wind_speed * sin(wind_angle_rad)])
+                v_wind = np.array([wind_speed * cos(wind_angle_rad), -wind_speed * sin(wind_angle_rad)])
                 
                 # Calculate UAV velocity vector using the same logic as goal arrow
                 # Determine goal direction based on robot state (same as draw_goal_vector)
@@ -285,8 +285,8 @@ class Agent:
                     Goal = Location.DEPOT_LOCATION
                 
                 # Get relative position to goal (same calculation as arrow visualization)
-                relative_position = self.get_relative_position_to_location(Goal)
-                
+                relative_position = rotate(self.get_relative_position_to_location(Goal), self.orientation)
+
                 # Calculate UAV direction toward goal
                 relative_position_norm = np.linalg.norm(relative_position)
                 if relative_position_norm > 0:
@@ -306,7 +306,7 @@ class Agent:
                 
             else:
                 v_air = self._speed
-
+                
             Epm = pow(self.g*total_weight,1.5)/ ( v_air * pow(2*self.n_r*self.rho*self.zeta,0.5) ) #Energy consumed per meter in Joul
             Eps = Epm * self._speed # Energy consumed per second in Joule
             self.current_battery_capacity -= Eps / 3600.0  # Convert to Wh           

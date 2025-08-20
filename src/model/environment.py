@@ -215,7 +215,7 @@ class Environment:
 
                         self.next_order_ready = True
 
-                        self.advertise_next_order();
+                        self.advertise_next_order()
                     else:
                         self.current_order = 0
                         self.next_order_ready = False
@@ -237,7 +237,7 @@ class Environment:
                                 self.current_order += 1
                     
                         self.next_order_ready = True
-                        self.advertise_next_order();
+                        self.advertise_next_order()
 
                     else:
                         self.current_order = 0
@@ -245,7 +245,7 @@ class Environment:
                         self.current_order_advertised = False
             else:
                 if self.next_order_ready: # order ready but it was not advertised, try to advertise it again!
-                    self.advertise_next_order();
+                    self.advertise_next_order()
                 else:
                     if self.pending_orders_list.count(None)<len(self.pending_orders_list):
                         while self.current_order<len(self.pending_orders_list) and self.pending_orders_list[self.current_order] == None:
