@@ -265,17 +265,16 @@ class Agent:
 
             if self.environmental_factors_enabled:
                 # Get current wind conditions
-                wind_speed, wind_direction_meteorological = self.get_environmental_conditions()
-                
+                wind_speed, wind_direction_meteorological = self.get_environmental_conditions()                
                 # Convert wind direction from meteorological to mathematical convention
                 # Meteorological: 0° = North, clockwise (0°=N, 90°=E, 180°=S, 270°=W)
                 # Mathematical: 0° = East, counter-clockwise (0°=E, 90°=N, 180°=W, 270°=S)
                 # Conversion: math_angle = (90 - met_angle) % 360
-                wind_direction_math = (90 - wind_direction_meteorological) % 360
+                wind_direction_math = (90 - wind_direction_meteorological) % 360 # direction wind is coming from
                 
                 # Calculate wind vector components (where wind is coming from)
                 wind_angle_rad = radians(wind_direction_math)
-                v_wind = np.array([wind_speed * cos(wind_angle_rad), -wind_speed * sin(wind_angle_rad)])
+                v_wind = -np.array([wind_speed * cos(wind_angle_rad), -wind_speed * sin(wind_angle_rad)])
                 
                 # Calculate UAV velocity vector using the same logic as goal arrow
                 # Determine goal direction based on robot state (same as draw_goal_vector)
@@ -303,12 +302,20 @@ class Agent:
                 
                 # Calculate airspeed magnitude
                 v_air = np.linalg.norm(v_air_vect)
+                # # store vectors for debugging/visualisation
+                # self.v_uav_vect = v_uav_vect
+                # self.v_wind = v_wind
+
                 
             else:
                 v_air = self._speed
+                # # no environmental wind: zero vectors for drawing
+                # self.v_uav_vect = np.array([0.0, 0.0])
+                # self.v_wind = np.array([0.0, 0.0])
                 
             Epm = pow(self.g*total_weight,1.5)/ ( v_air * pow(2*self.n_r*self.rho*self.zeta,0.5) ) #Energy consumed per meter in Joul
             Eps = Epm * self._speed # Energy consumed per second in Joule
+            # print(f"Energy consumed per second: {Eps} J","v_air",v_air)
             self.current_battery_capacity -= Eps / 3600.0  # Convert to Wh           
             self._battery_level = np.round(self.current_battery_capacity/self.actual_battery_capacity*100.0,1)
 
@@ -472,6 +479,19 @@ class Agent:
             self.draw_goal_vector(canvas, pixel_to_m)
             self.draw_orientation(canvas, pixel_to_m)
             self.write_battery_level(canvas,pixel_to_m)
+            # # Debug: draw UAV velocity and wind vectors (scaled for visibility)
+            # try:
+            #     scale = max(10.0, 10.0 / pixel_to_m)  # scale arrows so they're visible in pixels
+            #     x0 = self.pos[0] / pixel_to_m
+            #     y0 = self.pos[1] / pixel_to_m
+            #     # UAV velocity (blue)
+            #     v_u = self.v_uav_vect
+            #     canvas.create_line(x0, y0, x0 + v_u[0] * scale, y0 + v_u[1] * scale, fill='blue', width=2, arrow='last')
+            #     # Wind vector (red)
+            #     v_w = -self.v_wind
+            #     canvas.create_line(x0, y0, x0 + v_w[0] * scale, y0 + v_w[1] * scale, fill='red', width=2, arrow='last')
+            # except Exception:
+            #     pass
 
     # function to draw robot trajectory 
     def draw_trace(self, canvas):
