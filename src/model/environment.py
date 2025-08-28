@@ -12,6 +12,13 @@ try:
 except ModuleNotFoundError:
     print("Tkinter not installed...")
 
+class WindCondition:
+    def __init__(self, speed, direction, time):
+        self.speed = speed
+        self.direction = direction
+        self.time = time
+        
+
 # class that implements the environment (including the robots)
 class Environment:
 
@@ -23,7 +30,8 @@ class Environment:
         self.clock = clock        
         self.depot = (depot['x']*pixel_to_m, depot['y']*pixel_to_m, depot['radius']*pixel_to_m)
         
-        self.all_orders_list = deque() 
+        self.all_orders_list = deque()
+        self.all_wind_conditions = deque()
         self.pending_orders_list = []
         self.successful_orders_list = deque()
         self.failed_orders_list = deque()      
@@ -54,23 +62,11 @@ class Environment:
         
         # Current wind conditions (set randomly at initialization or disabled)
         if self.enable_environmental_factors:
-            self.current_wind_speed = uniform(0, self.max_wind_speed)  # random initial wind speed
-            self.current_wind_direction = uniform(0, 360)  # random initial wind direction (0-360)
-            
-            # Initialize wind change timing and targets
-            self.next_wind_change_time = self.calculate_next_wind_change_time()
-            self.set_next_wind_target()
-            
-            print(f'Wind initialized: speed={self.current_wind_speed:.2f} m/s, direction={self.current_wind_direction:.2f} degrees')
-            print(f'Next wind change in {self.next_wind_change_time - self.clock.tick:.2f} seconds')
-            print(f'Next wind speed target: {self.target_wind_speed:.2f} m/s at {self.target_wind_direction:.2f} degrees')
-            print(f'Speed change rate: {self.wind_speed_rate:.5f} m/s per second')
-            print(f'Direction change rate: {self.wind_direction_rate:.5f} degrees per second')
+            self.draw_all_wind_conditions(environment_params)
         else:
             # No wind when environmental factors are disabled
             self.current_wind_speed = 0.0
             self.current_wind_direction = 0.0
-            self.next_wind_change_time = float('inf')
             self.target_wind_speed = 0.0
             self.target_wind_direction = 0.0
             self.wind_speed_rate = 0.0
@@ -101,24 +97,17 @@ class Environment:
         self.robot_image_loaded = ImageTk.PhotoImage(file="../assets/drone_w_load.png")
         self.depot_image = ImageTk.PhotoImage(file="../assets/warehouse.png")
 
-    def calculate_next_wind_change_time(self):
-        """
-        Calculate when the next wind change should occur (similar to order arrival).
-        Uses exponential distribution for realistic timing.
-        """
-        return self.clock.tick + expovariate(1.0 / self.wind_change_interval)
-
     def set_next_wind_target(self):
         """
         Set the next wind target and calculate interpolation rates.
         """
         # Set new targets
-        self.target_wind_speed = uniform(0, self.max_wind_speed)
-        self.target_wind_direction = uniform(0, 360)
-        
+        self.target_wind_speed = self.all_wind_conditions[0].speed
+        self.target_wind_direction = self.all_wind_conditions[0].direction
+
         # Calculate time until target (always positive since next_wind_change_time is always in the future)
-        time_to_target = self.next_wind_change_time - self.clock.tick
-        
+        time_to_target = self.all_wind_conditions[0].time - self.clock.tick
+
         # Calculate speed change rate (per second)
         self.wind_speed_rate = (self.target_wind_speed - self.current_wind_speed) / time_to_target
         
@@ -143,13 +132,11 @@ class Environment:
             return
             
         # Check if we need to set a new target
-        if self.clock.tick >= self.next_wind_change_time:
+        if self.clock.tick >= self.all_wind_conditions[0].time:
             # We've reached the target, set new target
-            self.current_wind_speed = self.target_wind_speed
-            self.current_wind_direction = self.target_wind_direction
-            
-            # Calculate next change time and set new target
-            self.next_wind_change_time = self.calculate_next_wind_change_time()
+            self.current_wind_speed = self.all_wind_conditions[0].speed
+            self.current_wind_direction = self.all_wind_conditions[0].direction
+            self.all_wind_conditions.popleft()
             self.set_next_wind_target()
         else:
             # Interpolate towards target (smooth change every second)
@@ -179,7 +166,6 @@ class Environment:
         # 1. Update orders' list
         if self.evaluation_type == "continuous":
             self.update_pending_orders_list(self.order_params)
-
 
         # 2. Exectue robot step
         for robot in self.population:
@@ -296,6 +282,13 @@ class Environment:
             order_id+=1
 
         print(f'Drawing all orders = {len(self.all_orders_list)}')
+
+    def draw_all_wind_conditions(self, environment_params):
+        time = 0
+        while time <= self.simulation_steps:
+            self.all_wind_conditions.append(WindCondition(speed=uniform(0, environment_params['max_wind_speed']), direction=uniform(0, 360), time=time))
+            time += expovariate(1.0/environment_params['wind_change_interval'])
+        print(f'Drawing all wind conditions = {len(self.all_wind_conditions)}')
 
     # function that implements order arrival as simulation progresses
     def update_pending_orders_list(self, order_params):
