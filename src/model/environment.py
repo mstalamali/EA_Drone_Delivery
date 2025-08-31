@@ -288,6 +288,7 @@ class Environment:
         while time <= self.simulation_steps:
             self.all_wind_conditions.append(WindCondition(speed=uniform(0, environment_params['max_wind_speed']), direction=uniform(0, 360), time=time))
             time += expovariate(1.0/environment_params['wind_change_interval'])
+        self.all_wind_conditions.append(WindCondition(speed=uniform(0, environment_params['max_wind_speed']), direction=uniform(0, 360), time=time))
         print(f'Drawing all wind conditions = {len(self.all_wind_conditions)}')
 
     # function that implements order arrival as simulation progresses
